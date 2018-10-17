@@ -1,11 +1,24 @@
 import time
 import math
+import collections
 
 start_time = time.time()
+
+# -----------------------
+# -----------------------
+# ---Utility functions---
+# -----------------------
+# -----------------------
 
 
 def letters(string):
     return "".join([character for character in string if character.isalpha()])
+
+# -----------------------
+# -----------------------
+# --Frequency analysis---
+# -----------------------
+# -----------------------
 
 
 english_chars = [
@@ -13,20 +26,34 @@ english_chars = [
     'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z'
 ]
 
+LetFreq = collections.namedtuple('LetterFrequency', ['character', 'frequency'])
+
 
 def auto_freq_analyser(text):
-    local_alphabet_freq = {}
+    local_alphabet_freq = collections.defaultdict(int)
     text = letters(text).lower()
     for character in text:
-        if character in local_alphabet_freq:
-            local_alphabet_freq[character] += 1
-        else:
-            local_alphabet_freq[character] = 1
+        local_alphabet_freq[character] += 1
+    freq_table = list()
     for key, value in local_alphabet_freq.items():
-        local_alphabet_freq[key] *= 100 / len(text)
+        value *= 100 / len(text)
+        freq_table.append(LetFreq(character=key, frequency=value))
     return sorted(
-        local_alphabet_freq.items(), key=lambda key_value: key_value[1],
-        reverse=True)
+        freq_table[:], key=lambda elem: elem.frequency, reverse=True
+    )
+    return [tuple(elem) for elem in sorted(
+        freq_table[:], key=lambda elem: elem.frequency, reverse=True
+    )]
+
+# -----------------------
+# -----------------------
+# ------Decryption-------
+# -----------------------
+# -----------------------
+
+
+def caesar_char_shift(char, shift):
+    return english_chars[(english_chars.index(char.lower()) + shift) % 26]
 
 
 def caesar_crypt(text, shift):
@@ -39,8 +66,12 @@ def caesar_crypt(text, shift):
     return result_text
 
 
-def caesar_char_shift(char, shift):
-    return english_chars[(english_chars.index(char.lower()) + shift) % 26]
+def auto_caesar_crypt(text):
+    modal_char = auto_freq_analyser(text)[0].character
+    shift = (
+        english_chars.index("e") - english_chars.index(modal_char)
+    ) % 26
+    return caesar_crypt(text, shift)
 
 
 encrypted_text_1A = """
@@ -51,4 +82,4 @@ CVMMT
 """
 
 #print(caesar_crypt("ifmmp xpsme!", 25))
-print(auto_freq_analyser(encrypted_text_1A))
+print(auto_caesar_crypt(encrypted_text_1A))
