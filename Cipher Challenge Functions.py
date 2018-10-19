@@ -82,7 +82,7 @@ class Caesar:
 
 class Affine:
 
-    AffineKey = collections.namedtuple('AffineKey', ['a', 'b'])
+    Key = collections.namedtuple('AffineKey', ['a', 'b'])
 
     def __init__(self, text, switch=(1, 0)):
         self.text = text
@@ -97,13 +97,11 @@ class Affine:
 
     def key_generator(self):
         """
-        # a*p1 + b = c1
-        # a*p2 + b = c2
-        # p1 = index of e, p2 = index of t
-        # a*p1 - a*p2 = c1 - c2
-        # a(p1 - p2) = c1 - c2
-        # a = (c1 - c2)(p1 - p2)^-1
-        # b = c1 - a*p1
+        a*c1 + b = p1
+        a*c2 + b = p2
+        a*(c1 - c2) = p1 - p2
+        a = (p1 - p2)(c1 - c2)^-1
+        b = p1 - a*c1
         """
         possible_keys = list()
         for pair in self.modal_pairs():
@@ -112,14 +110,26 @@ class Affine:
                 plain1 = english_chars.index("e")
                 cipher2 = english_chars.index(pair[1])
                 plain2 = english_chars.index("t")
-                a = (cipher1 - cipher2)*sympy.mod_inverse(
-                    (plain1 - plain2), ENGLISH_LANG_LEN) % ENGLISH_LANG_LEN
-                b = (cipher1 - a*plain1) % ENGLISH_LANG_LEN
+                a = (plain1 - plain2)*sympy.mod_inverse(
+                    (cipher1 - cipher2), ENGLISH_LANG_LEN) % ENGLISH_LANG_LEN
+                b = (plain1 - a*cipher1) % ENGLISH_LANG_LEN
             except ValueError:
                 continue
             else:
-                possible_keys.append(Affine.AffineKey(a, b))
+                possible_keys.append(Affine.Key(a, b))
         return possible_keys
+
+    @staticmethod
+    def char_shift(char, key):
+        return english_chars[
+            (english_chars.index(char.lower())*key.a + key.b)
+            % ENGLISH_LANG_LEN
+        ]
+
+    def encipher(self, key):
+        return "".join(
+            self.char_shift(char, key) if char.isalpha()
+            else char for char in self.text)
 
 
 encrypted_text_1A = """
@@ -131,5 +141,4 @@ CVMMT
 
 text_1A = Affine(encrypted_text_1A)
 print(text_1A.key_generator())
-text_2_1A = Caesar(encrypted_text_1A, shift=5)
-print(text_2_1A.encipher())
+print(text_1A.encipher(Affine.Key(1, 5)))
