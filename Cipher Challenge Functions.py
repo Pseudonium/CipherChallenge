@@ -21,6 +21,8 @@ def letters(string):
 # -----------------------
 
 
+ENGLISH_LANG_LEN = 26
+
 english_chars = [
     'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n',
     'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z'
@@ -53,7 +55,9 @@ def auto_freq_analyser(text):
 
 
 def caesar_char_shift(char, shift):
-    return english_chars[(english_chars.index(char.lower()) + shift) % 26]
+    return english_chars[
+        (english_chars.index(char.lower()) + shift) % ENGLISH_LANG_LEN
+    ]
 
 
 def caesar_crypt(text, shift):
@@ -70,7 +74,7 @@ def auto_caesar_crypt(text):
     modal_char = auto_freq_analyser(text)[0].character
     shift = (
         english_chars.index("e") - english_chars.index(modal_char)
-    ) % 26
+    ) % ENGLISH_LANG_LEN
     return caesar_crypt(text, shift)
 
 
