@@ -32,7 +32,7 @@ english_chars = [
     'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z'
 ]
 
-#Source: Wikipedia
+# Source: Wikipedia
 english_1gram_expected_dict = {
     'e': 12.49, 't': 9.28, 'a': 8.04, 'o': 7.64,
     'i': 7.57, 'n': 7.23, 's': 6.51, 'r': 6.28,
@@ -63,6 +63,11 @@ def auto_freq_analyser(text):
     )]
 
 
+def auto_counter(text):
+    local_alphabet_freq = collections.defaultdict(int)
+    pass
+
+
 def english_1gram_chi(text):
     observed_freq = auto_freq_analyser(text)
     observed = [
@@ -77,6 +82,14 @@ def english_1gram_chi(text):
         observed,
         f_exp=expected
     )
+
+
+def codex(text):
+    text = letters(text).lower()
+    length = len(text)
+    return sum(
+        count * (count - 1) for count in collections.Counter(text).values())/(
+        length * (length - 1))
 
 # -----------------------
 # -----------------------
@@ -172,6 +185,10 @@ class Affine:
             possible_texts, key=lambda elem: elem[1])
 
 
+class Viginere:
+    pass
+
+
 encrypted_text_1A = """
 HVMTVH,
 DO DN BMZVO OJ CZVM AMJH TJP. RZ YDY KDXF PK NJHZ XCVOOZM V XJPKGZ JA HJIOCN VBJ VIY E RVN HZIODJIZY OCZMZ OJJ, NJ RZ VGMZVYT CVQZ V ADGZ JI CZM. CZM IVHZ DN EJYDZ VIY NCZ RJMFN VN GDVDNJI WZORZZI OCZ WMDODNC GDWMVMT VIY OCZ WMDODNC HPNZPH, MZNZVMXCDIB GDIFN WZORZZI VMOZAVXON VIY DHKZMDVG MJHVI OZSON, NJ OCVO ODZN DI RDOC OCZ DIOZGGDBZIXZ TJP CVQZ WZZI MZXZDQDIB. IJOCDIB NPBBZNON OCVO NCZ CVN WZZI DIQJGQZY DI VITOCDIB NCVYT VIY NCZ CVN CZGKZY RDOC NZQZMVG DINPMVIXZ AMVPY XVNZN. NCZ CVN VI DIOZMZNODIB WVXFBMJPIY. NCZ YDY V KCY JI CPHVI HDBMVODJI NOPYDZN, HVDIGT HVOCZHVODXVG HJYZGGDIB, OCZI HJQZY JI OJ NOPYT FIJRGZYBZ HDBMVODJI RCDXC BJO CZM DIOJ OCZ WDWGDJKCDGZ XDMXPDO. VAOZM BMVYPVODIB NCZ NKZIO NJHZ ODHZ RDOC JIZ JA OCZ GJIYJI VPXODJI CJPNZN RJMFDIB JI KMJQZIVIXZ WZAJMZ OVFDIB CZM XPMMZIO KJNDODJI RDOC OCZ GDWMVMT. OCZMZ MZVGGT DN IJOCDIB NPNKDXDJPN DI CZM WVXFBMJPIY VIY D RVN DIXGDIZY OJ RMDOZ CZM JAA VN V GZVY, WPO RCZI D BJO TJPM HZNNVBZ D YZXDYZY D RVIOZY OJ HZZO CZM. D OMDZY OJ NZO OCVO PK JIGT OJ WZ OJGY OCVO NCZ DN JPO JA XJPIOMT AJM V RCDGZ. DI XVDMJ.
@@ -182,3 +199,6 @@ CVMMT
 text_1A = Affine(encrypted_text_1A)
 print(text_1A.key_generator())
 solved = text_1A.encipher(Affine.Key(1, 5))
+print(codex(text_1A.text))
+print(codex(solved))
+print(collections.Counter(letters(text_1A.text)))
