@@ -63,7 +63,8 @@ def auto_freq_analyser(text):
     )]
 
 
-def english_1gram_chi(observed_freq):
+def english_1gram_chi(text):
+    observed_freq = auto_freq_analyser(text)
     observed = [
         elem.frequency for elem in sorted(
             observed_freq, key=lambda elem: elem.character)
@@ -159,6 +160,14 @@ class Affine:
             self.char_shift(char, key) if char.isalpha()
             else char for char in self.text)
 
+    def auto_decipher(self):
+        possible_texts = []
+        for key in self.key_generator():
+            deciphered = self.encipher(key)
+            possible_texts.append((deciphered, english_1gram_chi(deciphered)))
+        return sorted(
+            possible_texts, key=lambda elem: elem[1])
+
 
 encrypted_text_1A = """
 HVMTVH,
@@ -170,5 +179,4 @@ CVMMT
 text_1A = Affine(encrypted_text_1A)
 print(text_1A.key_generator())
 solved = text_1A.encipher(Affine.Key(1, 5))
-print(english_1gram_chi(auto_freq_analyser(encrypted_text_1A)).statistic)
-print(english_1gram_chi(auto_freq_analyser(solved)).statistic)
+print(text_1A.auto_decipher())
