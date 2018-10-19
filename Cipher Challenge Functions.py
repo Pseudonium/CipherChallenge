@@ -112,6 +112,7 @@ class Caesar:
 class Affine:
 
     Key = collections.namedtuple('AffineKey', ['a', 'b'])
+    TextChi = collections.namedtuple('TextChi', ['text', 'chi'])
 
     def __init__(self, text, switch=(1, 0)):
         self.text = text
@@ -164,7 +165,9 @@ class Affine:
         possible_texts = []
         for key in self.key_generator():
             deciphered = self.encipher(key)
-            possible_texts.append((deciphered, english_1gram_chi(deciphered)))
+            possible_texts.append(Affine.TextChi(
+                deciphered, english_1gram_chi(deciphered))
+            )
         return sorted(
             possible_texts, key=lambda elem: elem[1])
 
@@ -179,4 +182,3 @@ CVMMT
 text_1A = Affine(encrypted_text_1A)
 print(text_1A.key_generator())
 solved = text_1A.encipher(Affine.Key(1, 5))
-print(text_1A.auto_decipher())
