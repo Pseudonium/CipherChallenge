@@ -55,28 +55,28 @@ def auto_freq_analyser(text):
 # -----------------------
 
 
-def caesar_char_shift(char, shift):
-    return english_chars[
-        (english_chars.index(char.lower()) + shift) % ENGLISH_LANG_LEN
-    ]
+class Caesar:
+    def __init__(self, text, shift=0):
+        self.text = text
+        self.shift = shift
+        self.auto = not bool(self.shift)
 
+    @staticmethod
+    def char_shift(char, shift):
+        return english_chars[
+            (english_chars.index(char.lower()) + shift) % ENGLISH_LANG_LEN
+        ]
 
-def caesar_crypt(text, shift):
-    result_text = ''
-    for character in text:
-        if character.isalpha():
-            result_text += caesar_char_shift(character, shift)
-        else:
-            result_text += character
-    return result_text
-
-
-def auto_caesar_crypt(text):
-    modal_char = auto_freq_analyser(text)[0].character
-    shift = (
-        english_chars.index("e") - english_chars.index(modal_char)
-    ) % ENGLISH_LANG_LEN
-    return caesar_crypt(text, shift)
+    def encipher(self):
+        if self.auto:
+            modal_char = auto_freq_analyser(self.text)[0].character
+            self.shift = (
+                english_chars.index("e") - english_chars.index(modal_char)
+            ) % ENGLISH_LANG_LEN
+        return "".join(
+            self.char_shift(char, self.shift) if char.isalpha()
+            else char for char in self.text
+        )
 
 
 encrypted_text_1A = """
@@ -85,8 +85,3 @@ DO DN BMZVO OJ CZVM AMJH TJP. RZ YDY KDXF PK NJHZ XCVOOZM V XJPKGZ JA HJIOCN VBJ
 D RDGG NZZ TJP OCZMZ.
 CVMMT
 """
-
-#print(caesar_crypt("ifmmp xpsme!", 25))
-# print(auto_caesar_crypt(encrypted_text_1A))
-
-print(sympy.mod_inverse(3, ENGLISH_LANG_LEN))
