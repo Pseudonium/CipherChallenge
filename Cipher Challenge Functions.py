@@ -2,6 +2,8 @@ import time
 import math
 import collections
 import sympy
+import scipy
+from scipy import stats
 import itertools
 
 start_time = time.time()
@@ -30,6 +32,17 @@ english_chars = [
     'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z'
 ]
 
+#Source: Wikipedia
+english_1gram_expected_dict = {
+    'e': 12.49, 't': 9.28, 'a': 8.04, 'o': 7.64,
+    'i': 7.57, 'n': 7.23, 's': 6.51, 'r': 6.28,
+    'h': 5.05, 'l': 4.07, 'd': 3.82, 'c': 3.34,
+    'u': 2.73, 'm': 2.51, 'f': 2.40, 'p': 2.14,
+    'g': 1.87, 'w': 1.68, 'y': 1.66, 'b': 1.48,
+    'v': 1.05, 'k': 0.54, 'x': 0.23, 'j': 0.16,
+    'q': 0.12, 'z': 0.09
+}
+
 LetFreq = collections.namedtuple('LetterFrequency', ['character', 'frequency'])
 
 
@@ -48,6 +61,21 @@ def auto_freq_analyser(text):
     return [tuple(elem) for elem in sorted(
         freq_table[:], key=lambda elem: elem.frequency, reverse=True
     )]
+
+
+def english_1gram_chi(observed_freq):
+    observed = [
+        elem.frequency for elem in sorted(
+            observed_freq, key=lambda elem: elem.character)
+    ]
+    observed = (observed + ENGLISH_LANG_LEN * [0])[:ENGLISH_LANG_LEN]
+    expected = [english_1gram_expected_dict[char] for char in english_chars]
+    # print(observed)
+    # print(expected)
+    return scipy.stats.chisquare(
+        observed,
+        f_exp=expected
+    )
 
 # -----------------------
 # -----------------------
@@ -141,4 +169,6 @@ CVMMT
 
 text_1A = Affine(encrypted_text_1A)
 print(text_1A.key_generator())
-print(text_1A.encipher(Affine.Key(1, 5)))
+solved = text_1A.encipher(Affine.Key(1, 5))
+print(english_1gram_chi(auto_freq_analyser(encrypted_text_1A)).statistic)
+print(english_1gram_chi(auto_freq_analyser(solved)).statistic)
