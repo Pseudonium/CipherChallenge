@@ -1,6 +1,10 @@
 import time
 import math
 import collections
+import sympy
+import scipy
+from scipy import stats
+import itertools
 
 start_time = time.time()
 
@@ -28,6 +32,17 @@ english_chars = [
     'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z'
 ]
 
+#Source: Wikipedia
+english_1gram_expected_dict = {
+    'e': 12.49, 't': 9.28, 'a': 8.04, 'o': 7.64,
+    'i': 7.57, 'n': 7.23, 's': 6.51, 'r': 6.28,
+    'h': 5.05, 'l': 4.07, 'd': 3.82, 'c': 3.34,
+    'u': 2.73, 'm': 2.51, 'f': 2.40, 'p': 2.14,
+    'g': 1.87, 'w': 1.68, 'y': 1.66, 'b': 1.48,
+    'v': 1.05, 'k': 0.54, 'x': 0.23, 'j': 0.16,
+    'q': 0.12, 'z': 0.09
+}
+
 LetFreq = collections.namedtuple('LetterFrequency', ['character', 'frequency'])
 
 
@@ -47,6 +62,22 @@ def auto_freq_analyser(text):
         freq_table[:], key=lambda elem: elem.frequency, reverse=True
     )]
 
+
+def english_1gram_chi(text):
+    observed_freq = auto_freq_analyser(text)
+    observed = [
+        elem.frequency for elem in sorted(
+            observed_freq, key=lambda elem: elem.character)
+    ]
+    observed = (observed + ENGLISH_LANG_LEN * [0])[:ENGLISH_LANG_LEN]
+    expected = [english_1gram_expected_dict[char] for char in english_chars]
+    # print(observed)
+    # print(expected)
+    return scipy.stats.chisquare(
+        observed,
+        f_exp=expected
+    )
+
 # -----------------------
 # -----------------------
 # ------Decryption-------
@@ -54,28 +85,91 @@ def auto_freq_analyser(text):
 # -----------------------
 
 
-def caesar_char_shift(char, shift):
-    return english_chars[
-        (english_chars.index(char.lower()) + shift) % ENGLISH_LANG_LEN
-    ]
+class Caesar:
+    def __init__(self, text, shift=0):
+        self.text = text
+        self.shift = shift
+        self.auto = not bool(self.shift)
+
+    @staticmethod
+    def char_shift(char, shift):
+        return english_chars[
+            (english_chars.index(char.lower()) + shift) % ENGLISH_LANG_LEN
+        ]
+
+    def encipher(self):
+        if self.auto:
+            modal_char = auto_freq_analyser(self.text)[0].character
+            self.shift = (
+                english_chars.index("e") - english_chars.index(modal_char)
+            ) % ENGLISH_LANG_LEN
+        return "".join(
+            self.char_shift(char, self.shift) if char.isalpha()
+            else char for char in self.text
+        )
 
 
-def caesar_crypt(text, shift):
-    result_text = ''
-    for character in text:
-        if character.isalpha():
-            result_text += caesar_char_shift(character, shift)
-        else:
-            result_text += character
-    return result_text
+class Affine:
 
+    Key = collections.namedtuple('AffineKey', ['a', 'b'])
+    TextChi = collections.namedtuple('TextChi', ['text', 'chi'])
 
-def auto_caesar_crypt(text):
-    modal_char = auto_freq_analyser(text)[0].character
-    shift = (
-        english_chars.index("e") - english_chars.index(modal_char)
-    ) % ENGLISH_LANG_LEN
-    return caesar_crypt(text, shift)
+    def __init__(self, text, switch=(1, 0)):
+        self.text = text
+        self.switch = switch
+        self.auto = bool(switch[0] + switch[1] < 2)
+
+    def modal_pairs(self):
+        freq_chars = [
+            freq.character for freq in auto_freq_analyser(self.text)[0:5]
+        ]
+        return list(itertools.combinations(freq_chars, 2))
+
+    def key_generator(self):
+        """
+        a*c1 + b = p1
+        a*c2 + b = p2
+        a*(c1 - c2) = p1 - p2
+        a = (p1 - p2)(c1 - c2)^-1
+        b = p1 - a*c1
+        """
+        possible_keys = list()
+        for pair in self.modal_pairs():
+            try:
+                cipher1 = english_chars.index(pair[0])
+                plain1 = english_chars.index("e")
+                cipher2 = english_chars.index(pair[1])
+                plain2 = english_chars.index("t")
+                a = (plain1 - plain2)*sympy.mod_inverse(
+                    (cipher1 - cipher2), ENGLISH_LANG_LEN) % ENGLISH_LANG_LEN
+                b = (plain1 - a*cipher1) % ENGLISH_LANG_LEN
+            except ValueError:
+                continue
+            else:
+                possible_keys.append(Affine.Key(a, b))
+        return possible_keys
+
+    @staticmethod
+    def char_shift(char, key):
+        return english_chars[
+            (english_chars.index(char.lower())*key.a + key.b)
+            % ENGLISH_LANG_LEN
+        ]
+
+    def encipher(self, key):
+        return "".join(
+            self.char_shift(char, key) if char.isalpha()
+            else char for char in self.text)
+
+    def auto_decipher(self):
+        possible_texts = []
+        for key in self.key_generator():
+            deciphered = self.encipher(key)
+            possible_texts.append(Affine.TextChi(
+                deciphered, english_1gram_chi(deciphered))
+            )
+        return sorted(
+            possible_texts, key=lambda elem: elem[1])
 
 
 encrypted_text_1A = """
@@ -85,5 +179,6 @@ D RDGG NZZ TJP OCZMZ.
 CVMMT
 """
 
-#print(caesar_crypt("ifmmp xpsme!", 25))
-print(auto_caesar_crypt(encrypted_text_1A))
+text_1A = Affine(encrypted_text_1A)
+print(text_1A.key_generator())
+solved = text_1A.encipher(Affine.Key(1, 5))
