@@ -1,6 +1,7 @@
 import time
 import math
 import collections
+import sympy
 
 start_time = time.time()
 
@@ -86,4 +87,6 @@ CVMMT
 """
 
 #print(caesar_crypt("ifmmp xpsme!", 25))
-print(auto_caesar_crypt(encrypted_text_1A))
+# print(auto_caesar_crypt(encrypted_text_1A))
+
+print(sympy.mod_inverse(3, ENGLISH_LANG_LEN))
