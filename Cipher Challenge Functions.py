@@ -115,7 +115,9 @@ class Caesar:
     @staticmethod
     def char_shift(char, shift):
         return english_chars[
-            (english_chars.index(char.lower()) + shift) % ENGLISH_LANG_LEN
+            (
+                shift + english_chars.index(char.lower())
+            ) % ENGLISH_LANG_LEN
         ]
 
     def encipher(self):
@@ -198,10 +200,19 @@ class Affine:
 
 
 class Viginere:
-    def __init__(self, text, key=""):
+    def __init__(self, text, key="", beaufort=False):
         self.text = text
         self.key = key
         self.auto = not bool(key)
+        self.beaufort = beaufort
+
+    @staticmethod
+    def beaufort_char_shift(char, shift):
+        return english_chars[
+            (
+                shift - english_chars.index(char.lower())
+            ) % ENGLISH_LANG_LEN
+        ]
 
     @property
     def prob_key_length(self):
@@ -244,12 +255,16 @@ class Viginere:
         ]
         shifted_split = list()
         for index, split in enumerate(split_text):
-            split = Caesar(
-                split,
-                shift=ENGLISH_LANG_LEN-english_chars.index(self.key[index])
-                # Above added since vigenere keys are the complement, usually
-            )
-            shifted_split.append(split.encipher())
+            if self.beaufort:
+                split = "".join(self.beaufort_char_shift(
+                    char, english_chars.index(self.key[index])) for char in list(split))
+            else:
+                split = Caesar(
+                    split,
+                    shift=ENGLISH_LANG_LEN-english_chars.index(self.key[index]),
+                    # Above added since vigenere keys are the complement, usually
+                ).encipher()
+            shifted_split.append(split)
         enciphered = "".join(
             "".join(chunk)
             for chunk in itertools.zip_longest(*shifted_split, fillvalue=" ")
@@ -290,7 +305,7 @@ BTDWV EPO IGAQ OV YJWK AMAIEH SOZ FWI KZCTY KN GHM EEMIQBURN HBMM AU XYM IMRBOAS
     text_6A = Viginere(encrypted_text_6A, key="zeus")
     # print(text_6A.encipher())
     # print(len(letters(text_4B.text)))
-    text_5B = Viginere(encrypted_text_5B, key="arcanaimperii")
+    text_5B = Viginere(encrypted_text_5B, key="arcanaimperii", beaufort=True)
     """
     for possible_shift in range(26):
         shifted_text = Caesar(
@@ -304,4 +319,4 @@ BTDWV EPO IGAQ OV YJWK AMAIEH SOZ FWI KZCTY KN GHM EEMIQBURN HBMM AU XYM IMRBOAS
     # print(letters(text_4B.text[0::13]).lower())
     # print(collections.Counter(y))
     y = letters(text_4B.text)[0::13].lower()
-    print(text_4B.encipher())
+    print(text_5B.encipher())
