@@ -25,13 +25,18 @@ def match(original, formatted):
             formatted.insert(index, original[index])
         elif original[index].isupper() and formatted[index].isalpha():
             formatted[index] = formatted[index].upper()
-    if not original[-1].isalpha():  # Above loop does miss last character
-        formatted.append(original[-1])
     return "".join(formatted)
 
 
 def letters(string):
     return "".join(character for character in string if character.isalpha())
+
+
+def mono_substitute(text, substitutions):
+    return "".join(
+        substitutions[char] if char in substitutions
+        else char for char in text
+    )
 
 # -----------------------
 # -----------------------
@@ -231,7 +236,7 @@ class Affine:
                 deciphered, english_1gram_chi(deciphered))
             )
         return sorted(
-            possible_texts, key=lambda elem: elem[1])
+            possible_texts, key=lambda elem: elem[1])[0].text
 
 
 class Viginere:
@@ -371,5 +376,54 @@ class Scytale:
 
 if __name__ == "__main__":
     text_1A = Caesar(cipher_texts.Challenge2018.encrypted_text_1A)
-    print(text_1A.encipher())
+    solution_1A = text_1A.encipher()
+    text_1B = Caesar(cipher_texts.Challenge2018.encrypted_text_1B)
+    solution_1B = text_1B.encipher()
+    text_2A = Caesar(cipher_texts.Challenge2018.encrypted_text_2A)
+    solution_2A = text_2A.encipher()
+    text_2B = Affine(cipher_texts.Challenge2018.encrypted_text_2B)
+    solution_2B = text_2B.auto_decipher()
+    text_3A = Affine(cipher_texts.Challenge2018.encrypted_text_3A)
+    solution_3A = text_3A.auto_decipher()
+    text_3B = letters(cipher_texts.Challenge2018.encrypted_text_3B).lower()
+    solution_3B = match(
+        cipher_texts.Challenge2018.encrypted_text_3B,
+        mono_substitute(
+            text_3B,
+            substitutions={
+                'l': 'A',
+                'o': 'B',
+                'y': 'C',
+                'a': 'D',
+                't': 'E',
+                'z': 'F',
+                'b': 'G',
+                'c': 'H',
+                'd': 'I',
+                'e': 'J',
+                'f': 'K',
+                'g': 'L',
+                'h': 'M',
+                'i': 'N',
+                'j': 'O',
+                'k': 'P',
+                'm': 'Q',
+                'n': 'R',
+                'p': 'S',
+                'q': 'T',
+                'r': 'U',
+                's': 'V',
+                'u': 'W',
+                'v': 'X',
+                'w': 'Y',
+                'x': 'Z'
+            }
+        )
+    )
+    #print("1A: ", solution_1A)
+    #print("1B: ", solution_1B)
+    #print("2A: ", solution_2A)
+    #print("2B: ", solution_2B)
+    #print("3A: ", solution_3A)
+    print("3B: ", solution_3B)
     pass
