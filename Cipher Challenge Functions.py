@@ -19,19 +19,17 @@ start_time = time.time()
 def match(original, formatted):
     formatted = list(formatted)
     for index, value in enumerate(formatted):
-        # print(index)
-        if not original[index].isalpha():
+        if not original[index].isalpha() and formatted[index].isalpha():
             formatted.insert(index, original[index])
-        elif original[index].isupper():
+        elif original[index].isupper() and formatted[index].isalpha():
             formatted[index] = formatted[index].upper()
-        # print(formatted)
     if not original[-1].isalpha():  # Above loop does miss last character
         formatted.append(original[-1])
     return "".join(formatted)
 
 
 def letters(string):
-    return "".join([character for character in string if character.isalpha()])
+    return "".join(character for character in string if character.isalpha())
 
 # -----------------------
 # -----------------------
@@ -78,36 +76,19 @@ def auto_freq_analyser(text):
 
 
 def english_1gram_chi(text):
-    """
-    observed_freq = auto_freq_analyser(text)
-    observed = [
-        elem.frequency for elem in sorted(
-            observed_freq, key=lambda elem: elem.character)
-    ]
-    observed = (observed + ENGLISH_LANG_LEN * [0])[:ENGLISH_LANG_LEN]
-    expected = [english_1gram_expected_dict[char] for char in english_chars]
-    return scipy.stats.chisquare(
-        observed,
-        f_exp=expected
-    )
-    """
     counts = {char: 0 for char in english_chars}
     text = letters(text).lower()
     for char in text:
         counts[char] += 1
-    # counts = [freq[1] for freq in sorted(collections.Counter(text).items())]
     observed = [
         count[1] for count in sorted(counts.items())
     ]
-    expected = [math.ceil(english_1gram_expected_dict[char]
-                          * len(text) / 100) for char in english_chars]
-    print("Observed, ", observed, sum(observed))
-    print("Expected, ", expected, sum(expected))
+    expected = [
+        math.ceil(english_1gram_expected_dict[char] * (
+            len(text) / 100) for char in english_chars
+        )
+    ]
     return sum((o - e)**2 / e for o, e in zip(observed, expected))
-    return scipy.stats.chisquare(
-        observed,
-        f_exp=expected
-    )
 
 
 def codex(text):
@@ -143,10 +124,11 @@ class Caesar:
             self.shift = (
                 english_chars.index("e") - english_chars.index(modal_char)
             ) % ENGLISH_LANG_LEN
-        return "".join(
+        enciphered = "".join(
             self.char_shift(char, self.shift) if char.isalpha()
             else char for char in self.text
         )
+        return match(self.text, enciphered)
 
 
 class Affine:
@@ -199,9 +181,10 @@ class Affine:
     def encipher(self, key=None):
         if key is None:
             key = self.switch
-        return "".join(
+        enciphered = "".join(
             self.char_shift(char, key) if char.isalpha()
             else char for char in self.text)
+        return match(self.text, enciphered)
 
     def auto_decipher(self):
         possible_texts = []
@@ -267,10 +250,11 @@ class Viginere:
                 # Above added since vigenere keys are the complement, usually
             )
             shifted_split.append(split.encipher())
-        return "".join(
+        enciphered = "".join(
             "".join(chunk)
             for chunk in itertools.zip_longest(*shifted_split, fillvalue=" ")
         )
+        return match(self.text, enciphered.rstrip())
 
 
 if __name__ == "__main__":
@@ -320,13 +304,4 @@ BTDWV EPO IGAQ OV YJWK AMAIEH SOZ FWI KZCTY KN GHM EEMIQBURN HBMM AU XYM IMRBOAS
     # print(letters(text_4B.text[0::13]).lower())
     # print(collections.Counter(y))
     y = letters(text_4B.text)[0::13].lower()
-    # print(y)
-    # print(sorted(collections.Counter(y)))
-    # print(english_1gram_chi(y))
-    test1 = "Jello F ah, tfyNng to"
-    test2 = "helloiamtryingto"
-    a = encrypted_text_4B
-    b = text_4B.encipher().rstrip()
-    print(len(letters(b)))
-    print(len(b))
-    print(match(a, b))
+    print(text_4B.encipher())
