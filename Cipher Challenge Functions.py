@@ -327,15 +327,34 @@ class AffineViginere:
             enciphered = Viginere(aff_text, key=self.key).encipher()
         return match(self.text, enciphered)
 
-    class Scytale:
-        def __init__(self, text, key=1, auto=True):
-            self.text = text
-            self.key = key
-            self.auto = auto
 
-        def encipher(self):
-            pass
-        pass
+class Scytale:
+    TextFit = collections.namedtuple("TextFitness", ['text', 'fitness'])
+
+    def __init__(self, text, key=1, auto=True):
+        self.text = text
+        self.key = key
+        self.auto = auto
+
+    def encipher(self):
+        text = letters(self.text).lower()
+        if self.auto:
+            possible_texts = []
+            for length in range(1, 10):
+                possible_text = "".join(
+                    text[i::len(text)//length] for i in range(len(text)//length))
+                possible_texts.append(
+                    Scytale.TextFit(
+                        text=possible_text,
+                        fitness=english_quadgram_fitness(possible_text)
+                    )
+                )
+            enciphered = sorted(
+                possible_texts, key=lambda text_fit: text_fit.fitness)[0].text
+        else:
+            enciphered = "".join(text[i::len(text)//self.key]
+                                 for i in range(len(text)//self.key))
+        return enciphered
 
 
 if __name__ == "__main__":
@@ -394,11 +413,9 @@ B	N	Q	O	A	T	H	H	A	E	L	T	N	J	B	R	N	I	H	U	T	I	N	L	T	Z	C	T	R	N	C	O	P	E	S	M	A	G	F	L	
     text_5B = AffineViginere(encrypted_text_5B)
     print(text_5B.encipher())
     """
-    #text_7A = Viginere(encrypted_text_7A)
+    # text_7A = Viginere(encrypted_text_7A)
     # print(text_7A.encipher())
-    #text_7B = Viginere(encrypted_text_7B)
+    # text_7B = Viginere(encrypted_text_7B)
     # print(text_7B.prob_key)
-    z = letters(encrypted_text_2B)
-    print(english_quadgram_fitness(z))
-    print(english_quadgram_fitness(
-        "".join(z[i::len(z)//2] for i in range(len(z)//2))))
+    text_2B = Scytale(encrypted_text_2B)
+    print(text_2B.encipher())
