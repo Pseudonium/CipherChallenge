@@ -16,8 +16,20 @@ start_time = time.time()
 # -----------------------
 
 
+def match(original, formatted):
+    formatted = list(formatted)
+    for index, value in enumerate(formatted):
+        if not original[index].isalpha() and formatted[index].isalpha():
+            formatted.insert(index, original[index])
+        elif original[index].isupper() and formatted[index].isalpha():
+            formatted[index] = formatted[index].upper()
+    if not original[-1].isalpha():  # Above loop does miss last character
+        formatted.append(original[-1])
+    return "".join(formatted)
+
+
 def letters(string):
-    return "".join([character for character in string if character.isalpha()])
+    return "".join(character for character in string if character.isalpha())
 
 # -----------------------
 # -----------------------
@@ -64,17 +76,19 @@ def auto_freq_analyser(text):
 
 
 def english_1gram_chi(text):
-    observed_freq = auto_freq_analyser(text)
+    counts = {char: 0 for char in english_chars}
+    text = letters(text).lower()
+    for char in text:
+        counts[char] += 1
     observed = [
-        elem.frequency for elem in sorted(
-            observed_freq, key=lambda elem: elem.character)
+        count[1] for count in sorted(counts.items())
     ]
-    observed = (observed + ENGLISH_LANG_LEN * [0])[:ENGLISH_LANG_LEN]
-    expected = [english_1gram_expected_dict[char] for char in english_chars]
-    return scipy.stats.chisquare(
-        observed,
-        f_exp=expected
-    )
+    expected = [
+        math.ceil(english_1gram_expected_dict[char] * (
+            len(text) / 100) for char in english_chars
+        )
+    ]
+    return sum((o - e)**2 / e for o, e in zip(observed, expected))
 
 
 def codex(text):
@@ -93,15 +107,17 @@ def codex(text):
 
 
 class Caesar:
-    def __init__(self, text, shift=0):
+    def __init__(self, text, shift=0, forced=False):
         self.text = text
         self.shift = shift
-        self.auto = not bool(self.shift)
+        self.auto = not (bool(self.shift) or forced)
 
     @staticmethod
     def char_shift(char, shift):
         return english_chars[
-            (english_chars.index(char.lower()) + shift) % ENGLISH_LANG_LEN
+            (
+                shift + english_chars.index(char.lower())
+            ) % ENGLISH_LANG_LEN
         ]
 
     def encipher(self):
@@ -110,10 +126,11 @@ class Caesar:
             self.shift = (
                 english_chars.index("e") - english_chars.index(modal_char)
             ) % ENGLISH_LANG_LEN
-        return "".join(
+        enciphered = "".join(
             self.char_shift(char, self.shift) if char.isalpha()
             else char for char in self.text
         )
+        return match(self.text, enciphered)
 
 
 class Affine:
@@ -123,7 +140,7 @@ class Affine:
 
     def __init__(self, text, switch=(1, 0)):
         self.text = text
-        self.switch = switch
+        self.switch = Affine.Key(*switch)
         self.auto = bool(switch[0] + switch[1] < 2)
 
     def modal_pairs(self):
@@ -163,10 +180,13 @@ class Affine:
             % ENGLISH_LANG_LEN
         ]
 
-    def encipher(self, key):
-        return "".join(
+    def encipher(self, key=None):
+        if key is None:
+            key = self.switch
+        enciphered = "".join(
             self.char_shift(char, key) if char.isalpha()
             else char for char in self.text)
+        return match(self.text, enciphered)
 
     def auto_decipher(self):
         possible_texts = []
@@ -180,10 +200,19 @@ class Affine:
 
 
 class Viginere:
-    def __init__(self, text, key=""):
+    def __init__(self, text, key="", beaufort=False):
         self.text = text
         self.key = key
         self.auto = not bool(key)
+        self.beaufort = beaufort
+
+    @staticmethod
+    def beaufort_char_shift(char, shift):
+        return english_chars[
+            (
+                shift - english_chars.index(char.lower())
+            ) % ENGLISH_LANG_LEN
+        ]
 
     @property
     def prob_key_length(self):
@@ -226,16 +255,21 @@ class Viginere:
         ]
         shifted_split = list()
         for index, split in enumerate(split_text):
-            split = Caesar(
-                split,
-                shift=ENGLISH_LANG_LEN-english_chars.index(self.key[index])
-                # Above added since vigenere keys are the complement, usually
-            )
-            shifted_split.append(split.encipher())
-        return "".join(
+            if self.beaufort:
+                split = "".join(self.beaufort_char_shift(
+                    char, english_chars.index(self.key[index])) for char in list(split))
+            else:
+                split = Caesar(
+                    split,
+                    shift=ENGLISH_LANG_LEN-english_chars.index(self.key[index]),
+                    # Above added since vigenere keys are the complement, usually
+                ).encipher()
+            shifted_split.append(split)
+        enciphered = "".join(
             "".join(chunk)
             for chunk in itertools.zip_longest(*shifted_split, fillvalue=" ")
         )
+        return match(self.text, enciphered.rstrip())
 
 
 if __name__ == "__main__":
@@ -249,27 +283,40 @@ if __name__ == "__main__":
 
     encrypted_text_4B = """OMGR GHM KTEIA BHV JEEOQO GSCM WF RIRVCWXP EK EITCKNT SBDTIK KIMV VO GHM ZDXZKM OW TOZE IZS XNW LETCDRS TMIII PM WRU ACPWUCXVL XRF EOASCX PRU OWVVTNBR WR QVZBINEKA OY MYEIIWZ VVUPNSQMC. E WME YVCRF ANFTV YQA AGROVNBYTRK DMSGCSVAV’E HSE, LWMZVINN, JQREDM MMGGRBR, IZS SEM WF YKS SIZEI ETBA WRU TB IAEJI KPM OIFEE TW UBTCMUEEV TUE VQL MDXMRZCL PIXTTVJ QVVVPTRD JK ILV KQPYGR FCPADP.
 
-    ZV BHV KNGEZHTRZVO YVCRF TPQ CMEBP HRF BREV XTJK BW FZIHG LWZTPP ASIIOIFHME PRU JITKNEF FZAB XYMQR SCSR AB QQSIIKUD. YIGH NAGXZBCDV CNQ RMEDPMM BHVA RRPMMIIUTG DIQVR TPQ QEIJIRZCNF BIOZ MEBW TYG CBLL TTEIBTAEFS BF KMAIUWVIR. FUEIVS DRV ACCY UKVRUUHL MIZUJ YAF MWDIECTG WFWNQEL MCH ROZITQLN PZABSKML TYG TEIJGCI DIZCLU FVDMXXYJ KITF VO GHM XTKRBCS FH TUE VUCXY.
+ZV BHV KNGEZHTRZVO YVCRF TPQ CMEBP HRF BREV XTJK BW FZIHG LWZTPP ASIIOIFHME PRU JITKNEF FZAB XYMQR SCSR AB QQSIIKUD. YIGH NAGXZBCDV CNQ RMEDPMM BHVA RRPMMIIUTG DIQVR TPQ QEIJIRZCNF BIOZ MEBW TYG CBLL TTEIBTAEFS BF KMAIUWVIR. FUEIVS DRV ACCY UKVRUUHL MIZUJ YAF MWDIECTG WFWNQEL MCH ROZITQLN PZABSKML TYG TEIJGCI DIZCLU FVDMXXYJ KITF VO GHM XTKRBCS FH TUE VUCXY.
 
-    WVE UCY GHM XJGB WN TYG NVNBT HIVUMD KQ CUAVST. E IMKOEPAVSAMCGV AYURF RRPWDIIU BPAK VHRY PMS WVMV TYG ADUQXP JCGQNX HRBM I FGIV IB MFPS TRIGEMLA, QN R EAZP ZGAIU JG A KTIOEAYPR TITLVF CNLOMRYJ. BPE EGW YEOMIYJ ZMCFINVSMP ILRB BHV RRVVIFXSEA WF R NOAG UMGGY PID VZHNUAFTH YQA MVP, TUEG ITVV VWT IGAQY NAG FRBBLV CNQ CIFD WYWCLU JAIE AQCX WWZ RVKNSOZOTQVVBS, SWT GHM VDC FN AEVKNT TPQ ASJB IQLKLN SW OASJM IT YCNQ CTAJHVL PIJ LUQGMYTRK, IVD YG LNUVOWIU IV AKVAPK CZSII BPE TQVRR WR SEISVEJU.
+WVE UCY GHM XJGB WN TYG NVNBT HIVUMD KQ CUAVST. E IMKOEPAVSAMCGV AYURF RRPWDIIU BPAK VHRY PMS WVMV TYG ADUQXP JCGQNX HRBM I FGIV IB MFPS TRIGEMLA, QN R EAZP ZGAIU JG A KTIOEAYPR TITLVF CNLOMRYJ. BPE EGW YEOMIYJ ZMCFINVSMP ILRB BHV RRVVIFXSEA WF R NOAG UMGGY PID VZHNUAFTH YQA MVP, TUEG ITVV VWT IGAQY NAG FRBBLV CNQ CIFD WYWCLU JAIE AQCX WWZ RVKNSOZOTQVVBS, SWT GHM VDC FN AEVKNT TPQ ASJB IQLKLN SW OASJM IT YCNQ CTAJHVL PIJ LUQGMYTRK, IVD YG LNUVOWIU IV AKVAPK CZSII BPE TQVRR WR SEISVEJU.
 
-    FVGPFXRX CXHZNL NGIUCWK EIVV WPBN EMKI FN JAIDAEIIZH, XYM TEXKOA’S PQGSZK MFWQRGS EQGI WZCSKTAGEL NN XYM AUE TIFIVS IS STQNU VHRM IE SENV JRFME. GHM FGSFXA IE VHR FZACX CQVE XCVR WIK LMKP MXYCUFTQAC EEL BHV YIYD KMAKRKCS UCSUEL AJX FN BHV UUA DWIC XYM JLFQD-FOIWTH JTWPV YIGH PUH GRDILIA IATW FWI YMIRK QF GHM XTKZWV. TYG LRGQAC VRQVEU HLNMQZV EIZWWJ WPBN BTT IEMUY RPD ZAVMVIU BW UEJOESM OPPXIKUJ VAXIVS WMD XZIJQNRR, JGI GFCTD DCKR NW TTEUEIY RIAVNAF ILV AIVRIE UOZPTW RVL WVTE HNINAI KW ZEREH GHM EISCMV AHWIYA. EAGWV EIS KQ CBMM.
+FVGPFXRX CXHZNL NGIUCWK EIVV WPBN EMKI FN JAIDAEIIZH, XYM TEXKOA’S PQGSZK MFWQRGS EQGI WZCSKTAGEL NN XYM AUE TIFIVS IS STQNU VHRM IE SENV JRFME. GHM FGSFXA IE VHR FZACX CQVE XCVR WIK LMKP MXYCUFTQAC EEL BHV YIYD KMAKRKCS UCSUEL AJX FN BHV UUA DWIC XYM JLFQD-FOIWTH JTWPV YIGH PUH GRDILIA IATW FWI YMIRK QF GHM XTKZWV. TYG LRGQAC VRQVEU HLNMQZV EIZWWJ WPBN BTT IEMUY RPD ZAVMVIU BW UEJOESM OPPXIKUJ VAXIVS WMD XZIJQNRR, JGI GFCTD DCKR NW TTEUEIY RIAVNAF ILV AIVRIE UOZPTW RVL WVTE HNINAI KW ZEREH GHM EISCMV AHWIYA. EAGWV EIS KQ CBMM.
 
-    IWMCM KAKQ OEGIZXWVL I RVVRRAB IXXY BPE GTIFOVQG GRTOATWS VN KTPMEA, BHV TEZAQZXRX AWLUKEES PQAH KPM LZPE NGIUCWK ZMPVCTRD KTPVXMA BP EAYELACMRV INU KCRNQMC XIQJEJOEA. WPQC XYM TIEG FVNIXAC SZWKV, EAGO IZS QRVG OW VHR NQZIL CMOIFP HND ZQPGYML SRHEGY IZS XFWS SKQCX. TPQ REMITRP YEEE AMUI, RA EEIG MNNG AU XYM JRRXE YEOUDREIQRVU, BHT BA WMJ PWRIQR, PABA GIRTQSVF TUAB UC XYM JAKVLR HM TPH CWAT KJE FEKACH RYCICC, AAD EAGWV, BPE CGGVOV’E RSGG WF KJE POLQM LRL ILJQ GBNM.
+IWMCM KAKQ OEGIZXWVL I RVVRRAB IXXY BPE GTIFOVQG GRTOATWS VN KTPMEA, BHV TEZAQZXRX AWLUKEES PQAH KPM LZPE NGIUCWK ZMPVCTRD KTPVXMA BP EAYELACMRV INU KCRNQMC XIQJEJOEA. WPQC XYM TIEG FVNIXAC SZWKV, EAGO IZS QRVG OW VHR NQZIL CMOIFP HND ZQPGYML SRHEGY IZS XFWS SKQCX. TPQ REMITRP YEEE AMUI, RA EEIG MNNG AU XYM JRRXE YEOUDREIQRVU, BHT BA WMJ PWRIQR, PABA GIRTQSVF TUAB UC XYM JAKVLR HM TPH CWAT KJE FEKACH RYCICC, AAD EAGWV, BPE CGGVOV’E RSGG WF KJE POLQM LRL ILJQ GBNM.
 
-    FWI UWKUDGNGS TQUX KW UE SA ATRQODPR IZE LPCYEID DR KPQS GQIAT. LUS LV SVON VHNT BTT GFLMX DKGUT PMKI WITLVP IATW QCIDG PAEFS NNL FWEK I AETQNQ AYGXPR PID SGEA LWEI? SI LQD TCTB AAEJVV PQM KJAG TPQ RSUMF HRF BREV PTWKZWYVF AF PIDI SW IV OIFEELG DTXIMIT? GGRUAXE REKW EAJ AEG TW DT-NFQV AXTIPOTM PX KPM FFTT, NNL ODQDCVITCTVOVE UVFU BHV DAGTTQ WEU GMT KQ RRAKT WMD. QV A CGTGEZ FD IDXMRFT DBMQFXEE, IORZEOYA EDDXV “UWSK GXPETXTRK MUPVTOE, AA KDY YIDE DQSG GZMRMFCALP TEDUMEIIU Q PAMG FVNQEWIU UG AWHAVRA TTVV QV BIKTNNVUP ME XZEGCRNTQAC JFZ ZEKWRAIVS IS PWCR JKDR IV DDQV. QB PCGAFEA YT XF ZMPFTT GO GAJ XYIB BP CCGS WR SMGTWMREY NNL EIVVVOTY K HNVM BTVJCIDVF TUE VAGXYMZN IGBRLA FD CZMTD KQ OHR IDBC RVL TF VUEN WHTV KW CS KJE EEJQA GRTOATWS JHW TPW IMUAZPEQ FZQT WZVKE KJE JAZE PKRQVSK DOHDQORE RVL TYG IPEVU.” WMJ TMTKGR NPXQPVJ BW HRXE OEMZ P VVXTY KQ NRW WDSIIA NRFO RBMM UC AYQKH UQMVTQMC AIWBE “DA EFTMQBIU OVAVWS, HPWZ GITMQPK QF LOCD BSJB ZETGNG LMFIII Q PAMG BREV YDWK BZOLDLRD. QF PTGMIRJ ELRAZ FD QV BPAK VHR SQFJEKQWN ZP BEIBMCRZI PAJ YOESMZTH RVL SF K MHSB MHO PWC TF TEGUZZ IS DM IT IQMR WQFW XYM CTDQSG SXQTH. TWVDLET LOCD GIDIQNZPG NFNMXVJ QV TYG PEODUCGV IVD UQ NBT CZSIIBIKV CNL AKFXSE EPITJ MNY MZUPRUM TYG CHRZQCX KMVSZQNF BMFLIVV GOLTSRLN MCH KPM CRNEQOVUX.” XYM NIECL YIVQ DJ KPM EDREEOZ’E AIKBMR JGT N DMMSPZVM FFT ATRQODPR’A ZEKWRA, “I ATPPC MFPVET LOC FD LRDM CIQSFEL FWI ICJITQN OY BTT IEL WF KJE LEID”, PRU XMRYCPF HM RTPK BPAK EOATZUIMFV EAJ C SNFMD GIWCOE.
-    NJAGEDQG EXZQCFNA XNMI PX KPIT GQIAT, EUILZV I MFPTU HQE LSITL HRF BREV FJVEML UGUIQE LALR, RA NUIVHRR ZQESIBA FIQM PATQSSEQI MRFE PLMMG XYIB HZU HBPM AU VVABOICTVOV UC XYM MYVU OS TPQ TQGMZOI YEEE QZ GIRT REFRAEDG. TT WVB WUK VO EEKAKII BPE KYO NQCUAEV IVD KQ DRTMDBMEM EHRV HND PMETVVMD KQ TUE KASIO JMFFTE EEBGGRZVO TF TOZE.
+FWI UWKUDGNGS TQUX KW UE SA ATRQODPR IZE LPCYEID DR KPQS GQIAT. LUS LV SVON VHNT BTT GFLMX DKGUT PMKI WITLVP IATW QCIDG PAEFS NNL FWEK I AETQNQ AYGXPR PID SGEA LWEI? SI LQD TCTB AAEJVV PQM KJAG TPQ RSUMF HRF BREV PTWKZWYVF AF PIDI SW IV OIFEELG DTXIMIT? GGRUAXE REKW EAJ AEG TW DT-NFQV AXTIPOTM PX KPM FFTT, NNL ODQDCVITCTVOVE UVFU BHV DAGTTQ WEU GMT KQ RRAKT WMD. QV A CGTGEZ FD IDXMRFT DBMQFXEE, IORZEOYA EDDXV “UWSK GXPETXTRK MUPVTOE, AA KDY YIDE DQSG GZMRMFCALP TEDUMEIIU Q PAMG FVNQEWIU UG AWHAVRA TTVV QV BIKTNNVUP ME XZEGCRNTQAC JFZ ZEKWRAIVS IS PWCR JKDR IV DDQV. QB PCGAFEA YT XF ZMPFTT GO GAJ XYIB BP CCGS WR SMGTWMREY NNL EIVVVOTY K HNVM BTVJCIDVF TUE VAGXYMZN IGBRLA FD CZMTD KQ OHR IDBC RVL TF VUEN WHTV KW CS KJE EEJQA GRTOATWS JHW TPW IMUAZPEQ FZQT WZVKE KJE JAZE PKRQVSK DOHDQORE RVL TYG IPEVU.” WMJ TMTKGR NPXQPVJ BW HRXE OEMZ P VVXTY KQ NRW WDSIIA NRFO RBMM UC AYQKH UQMVTQMC AIWBE “DA EFTMQBIU OVAVWS, HPWZ GITMQPK QF LOCD BSJB ZETGNG LMFIII Q PAMG BREV YDWK BZOLDLRD. QF PTGMIRJ ELRAZ FD QV BPAK VHR SQFJEKQWN ZP BEIBMCRZI PAJ YOESMZTH RVL SF K MHSB MHO PWC TF TEGUZZ IS DM IT IQMR WQFW XYM CTDQSG SXQTH. TWVDLET LOCD GIDIQNZPG NFNMXVJ QV TYG PEODUCGV IVD UQ NBT CZSIIBIKV CNL AKFXSE EPITJ MNY MZUPRUM TYG CHRZQCX KMVSZQNF BMFLIVV GOLTSRLN MCH KPM CRNEQOVUX.” XYM NIECL YIVQ DJ KPM EDREEOZ’E AIKBMR JGT N DMMSPZVM FFT ATRQODPR’A ZEKWRA, “I ATPPC MFPVET LOC FD LRDM CIQSFEL FWI ICJITQN OY BTT IEL WF KJE LEID”, PRU XMRYCPF HM RTPK BPAK EOATZUIMFV EAJ C SNFMD GIWCOE.
+NJAGEDQG EXZQCFNA XNMI PX KPIT GQIAT, EUILZV I MFPTU HQE LSITL HRF BREV FJVEML UGUIQE LALR, RA NUIVHRR ZQESIBA FIQM PATQSSEQI MRFE PLMMG XYIB HZU HBPM AU VVABOICTVOV UC XYM MYVU OS TPQ TQGMZOI YEEE QZ GIRT REFRAEDG. TT WVB WUK VO EEKAKII BPE KYO NQCUAEV IVD KQ DRTMDBMEM EHRV HND PMETVVMD KQ TUE KASIO JMFFTE EEBGGRZVO TF TOZE.
 
-    BTDWV EPO IGAQ OV YJWK AMAIEH SOZ FWI KZCTY KN GHM EEMIQBURN HBMM AU XYM IMRBOAS."""
+BTDWV EPO IGAQ OV YJWK AMAIEH SOZ FWI KZCTY KN GHM EEMIQBURN HBMM AU XYM IMRBOAS."""
 
     encrypted_text_6A = """Lelqzq, C xnyhv Isxad en Gkcghhe ufc wbw gem ugejldv maw efjdexq. Rly zzh vwdr fwzhcff xbw LMXSR sjwqenauim gm e qakh agnwy ugemw zvimmh Mwkgoc leeamk u dnx ix msckd evgtx fgnocff jij sly ehwmamk wzztnwq en lgi Nwltfw nj Ujsigar. Xbss kund qy lhqy ln vylqmynd mn xqsg Bnhcw'r jladrx ss xbw Avclhwb Etwyml, ababl bsr e wgkpyusmif nj ujsizsbxm xqsg lgi Nwltfw. Isxad wuqr wbw jryo vi qgtpx xhkojd sol vlyjd xi yn ryps. Xbw bpow vem am xbw kswssmifr. Xbw emlks shw vem ss xbw Fvyss Tsjzqcv, sly kdgifc en lgi zgqx ix Peclaes ogmwz vem ttmfl evie sly jtmhk nj nzd Pcygxbgtwy ss Efwwehvqmu smh nzd xbaqh if Qlivdw, uenra lgi lmhrm ge xbw Bsfgrwok. Sly Cmmazs'w wsrxfw zx Vgcvoe vem ttmfl evie sly jdquamw ix sly Ezymgkioe zx Bskmwsqrukrym, zdrww sly “yqepw” semc nj amzvxamk nzd figj. Wi skp zaui wzztnwqw qwqi zgtrx ss xbw rmnw nj ifd sz lgi Mwuih Onrxwqw ix sly smgcwmx qgqpx. Lgi ifkc lwlecfhra dngulhshk zvy lgi Mlzxow nj Twtw ul Npseomu smh nzd Luffmhy Felvdrm ge Futxpif, zrx fn-shw gem smc cvde qzdvy lgi asqhyfr qcygx bsui vwdr, mg sly gmps hkeww vi wgtpx yn ryps mm Gkcghhe. Nzd gfmd en lgi yfc sz ugejldv zaui jghrnk rxlshkbl slyjd, wcfbi faflnamk, vmkp ufc suc zvy skp mqlfidr sz Rdym. Od wbgtpx td wuxd lyjd fyuzymw Isxad'w hwsaijj luk rihl gil ssxuujilk nr ng Kshvnr vq kesamk u dnra lqecd nj zgqkyv cswmlihlr vyndefamk nzd piuzxcgm sz ugejldv zaui. Nzzx vgtkbl tw yfnyaz smgw ss fgbenw zrx vdgchgil ugejldv maw. Ay zzh vwdr nzhreamk utnyn lgi ynnpolhsh ge xbw Hqjwqmud Bmjzdvm. Lzgcltw okdh vgsl nzd Zcydryjd ehv Aiumesll bmjzdvm ogmwz zvy hnpssktbsainab zyjrmifr sz lgi Wsdwuj rlcxs, ehv zx zaqwn od emktqyv slul bluhsil khb qgtpx td ihuqcjldh nzd wued auq. Vi qwqi udlsml qmazs. Qysmabaki Dgcmy'k trypoiwldh nskihl esl xnvawqc bsr kcndr gw zr cvde. C lgmhc vi gafln td evdd xi ltvh gtv yfdqcwr sh gmi ufnxbwq fs wwtfghxcff lyj fmzl, ayn A jrio gil utvlwmx zgbym ar jcytvcff sol vlyjd sh wzvnz sly kdzyfsl qgmhyj lmazs fy."""
 
     encrypted_text_5B = """Se vsv Rusyrrx fayyx ute Emaz ud Mpjmmwr ec lke kwrl mi hbi nqeqopzvsyi uh Nengepjii Ugxbhkz Giljjm Ymwxbrjivgz Npzhasx Zjrwgz cnk Uievm Purnnrsti Cmetjginxk, Ahjakbtr mrmyy “Hgw woxlnrk mm jtj zitwtn ip Yrqgcmfyckf aq ay ravh qyejnf. Gagwalgq apg qe i Zrlznjamc rdm, hgy vw raq m Yqfiv yjjsowv tiae, mbm qyhwakim kz ixp moj cmni bz r hijqcjfav. Ew xrq pahyn npx ar mhaxpz ci n pemmaa ud onp hz qeia xjw ipjhw. Ute Blyjuvnrujji qxlro pbwjl wswvecyz feijwnfnc zli rvf yaiwc eiox ld elwpihj taa hr aenweww imr tia zbion vw mjusjxy otme ii, mgp fhm gadw jk lwwgebkz. Ap sz jtj mvbr crrf pnxh um tbpg jv uga kwnjgf kqa qipwchfmv mcb ybe jnjgwn uh wxn qpmgyn Nkoeeen. Ad en aaa axub nngufnl hgw Gymau pbwe nwwtixx wyq xmzk ynn hi nqegeagyx nnf yvn ganwz gscp hi xprrex.” Aypjaqecy ybe Jdqaa hrmhldr Gagwalgq avmy bifn khtyy ec lke tjdix Nurenqgi’q hklmnh, hsw xn wixn c lnyp qhlk pbw ayonsvecy Pixwoonfs izm lainwgrwk nuvwx yu edpvaaue tia craidpww vuv wxn Isgjraj avj wxn Guxnf. Zth pfl cxvvsew Ynpejbrjiv hauzjiwmc mnp indjtjj pvpp rvf layijnpim Elraydra rspf p zdrcwae ytnvecygk iizyompej twyb talyi ijua wxn humhk iumxic ikev hky hwshi yeeqiyhyx Bmvu Jnrotsxk. Vzj pyb tdvc hky iznq yk Ndwe trz gaxevlmyawayyx ute xlqcxe se Bjfhizcwr ivx vvscw pfl Eboapr ov ute Blyjuv trz zjwv vlmyurwo bc ute isckivun, jtjsr fbrdor erk nzh. Igywpuxa mcyjx i vllxrv hd Lmbw, bsdwgaihjon nnf mesdqp ynlhnsv jleyb. Ptn ksqhb kiecpej dx op hibl qm muw jk utarjlb qk xslvhasvg, okgx ino oad."""
 
-    text_1A = Affine(encrypted_text_1A)
+    text_1A = Affine(encrypted_text_1A, switch=(1, 5))
     text_4B = Viginere(encrypted_text_4B, key="arcanaimperii")
     text_6A = Viginere(encrypted_text_6A, key="zeus")
-    print(text_6A.encipher())
-    print(len(letters(text_4B.text)))
-    text_5B = Viginere(encrypted_text_5B, key="arcanaimperii")
-    print(Affine(text_5B.encipher(), switch=(25, 26)).encipher())
+    # print(text_6A.encipher())
+    # print(len(letters(text_4B.text)))
+    text_5B = Viginere(encrypted_text_5B, key="arcanaimperii", beaufort=True)
+    """
+    for possible_shift in range(26):
+        shifted_text = Caesar(
+            letters(text_4B.text).lower()[0::13], shift=possible_shift, forced=True).encipher()
+        print(shifted_text)
+        print(collections.Counter(shifted_text))
+        print(possible_shift, english_1gram_chi(shifted_text))
+    """
+    y = """oagwtmtawzemramejrbjttzvvdnckzmfskxeprciavkrsgdomgdygnvgaaijosrheglyczebacuiiwzihqsmiektyncoiimtgluuovrelphevrbgtzelzxcqewnhrsrajipjaagmndpdaofkwepjkilganchtfivxdlqincewdetbsnmbnkotaoyjpeqnacfspjielrvfiofprdwixovepqbrrmdztfaalijiicpveveinbsmbcmqzdkbemnqmvbqizea"""
+    # print(y == letters(text_4B.text[0::13]).lower())
+    # print(letters(text_4B.text[0::13]).lower())
+    # print(collections.Counter(y))
+    y = letters(text_4B.text)[0::13].lower()
+    print(text_5B.encipher())
