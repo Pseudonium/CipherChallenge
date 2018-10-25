@@ -141,7 +141,7 @@ class Affine:
     def __init__(self, text, switch=(1, 0)):
         self.text = text
         self.switch = Affine.Key(*switch)
-        self.auto = bool(switch[0] + switch[1] < 2)
+        self.auto = bool(sum(switch) < 2)
 
     def modal_pairs(self):
         freq_chars = [
@@ -200,6 +200,9 @@ class Affine:
 
 
 class Viginere:
+
+    ChiShift = collections.namedtuple("ChiShift", ['chi', 'shift'])
+
     def __init__(self, text, key="", beaufort=False):
         self.text = text
         self.key = key
@@ -238,20 +241,13 @@ class Viginere:
         ]
         shifts = []
         for split in split_text:
-            """
-            modal_char = auto_freq_analyser(split)[0].character
-            split_shift = (
-                english_chars.index(modal_char)
-            ) - english_chars.index("e")
-            shifts.append(split_shift)
-            """
             split_shifts = list()
             for possible_shift in range(26):
                 shifted_text = Caesar(
                     split, shift=possible_shift, forced=True).encipher()
                 split_shifts.append(
-                    (english_1gram_chi(shifted_text), possible_shift))
-            split_shift = sorted(split_shifts)[0][1]
+                    Viginere.ChiShift(english_1gram_chi(shifted_text), possible_shift))
+            split_shift = sorted(split_shifts)[0].shift
             shifts.append(-1*split_shift % ENGLISH_LANG_LEN)
         return "".join(english_chars[shift] for shift in shifts)
 
@@ -282,6 +278,33 @@ class Viginere:
         return match(self.text, enciphered.rstrip())
 
 
+class AffineViginere:
+    def __init__(self, text, key="", switch=(1, 0)):
+        self.text = text
+        self.key = key
+        self.switch = Affine.Key(*switch)
+        self.auto = bool(sum(switch) < 2)
+
+    def encipher(self):
+        if self.auto:
+            possible_switches = [
+                (switch, 0) for switch in range(26)
+                if math.gcd(switch, 26) == 1
+            ]
+            aff_texts = [Affine(self.text, switch=possible_switch).encipher()
+                         for possible_switch in possible_switches]
+            vig_texts = [Viginere(aff_text).encipher()
+                         for aff_text in aff_texts]
+            possible_texts = [Affine.TextChi(
+                text=vig_text, chi=english_1gram_chi(vig_text)) for vig_text in vig_texts]
+            enciphered = sorted(
+                possible_texts, key=lambda text_chi: text_chi.chi)[0].text
+        else:
+            aff_text = Affine(self.text, switch=self.switch).encipher()
+            enciphered = Viginere(aff_text, key=self.key).encipher()
+        return match(self.text, enciphered)
+
+
 if __name__ == "__main__":
 
     encrypted_text_1A = """
@@ -310,23 +333,19 @@ BTDWV EPO IGAQ OV YJWK AMAIEH SOZ FWI KZCTY KN GHM EEMIQBURN HBMM AU XYM IMRBOAS
 
     encrypted_text_5B = """Se vsv Rusyrrx fayyx ute Emaz ud Mpjmmwr ec lke kwrl mi hbi nqeqopzvsyi uh Nengepjii Ugxbhkz Giljjm Ymwxbrjivgz Npzhasx Zjrwgz cnk Uievm Purnnrsti Cmetjginxk, Ahjakbtr mrmyy “Hgw woxlnrk mm jtj zitwtn ip Yrqgcmfyckf aq ay ravh qyejnf. Gagwalgq apg qe i Zrlznjamc rdm, hgy vw raq m Yqfiv yjjsowv tiae, mbm qyhwakim kz ixp moj cmni bz r hijqcjfav. Ew xrq pahyn npx ar mhaxpz ci n pemmaa ud onp hz qeia xjw ipjhw. Ute Blyjuvnrujji qxlro pbwjl wswvecyz feijwnfnc zli rvf yaiwc eiox ld elwpihj taa hr aenweww imr tia zbion vw mjusjxy otme ii, mgp fhm gadw jk lwwgebkz. Ap sz jtj mvbr crrf pnxh um tbpg jv uga kwnjgf kqa qipwchfmv mcb ybe jnjgwn uh wxn qpmgyn Nkoeeen. Ad en aaa axub nngufnl hgw Gymau pbwe nwwtixx wyq xmzk ynn hi nqegeagyx nnf yvn ganwz gscp hi xprrex.” Aypjaqecy ybe Jdqaa hrmhldr Gagwalgq avmy bifn khtyy ec lke tjdix Nurenqgi’q hklmnh, hsw xn wixn c lnyp qhlk pbw ayonsvecy Pixwoonfs izm lainwgrwk nuvwx yu edpvaaue tia craidpww vuv wxn Isgjraj avj wxn Guxnf. Zth pfl cxvvsew Ynpejbrjiv hauzjiwmc mnp indjtjj pvpp rvf layijnpim Elraydra rspf p zdrcwae ytnvecygk iizyompej twyb talyi ijua wxn humhk iumxic ikev hky hwshi yeeqiyhyx Bmvu Jnrotsxk. Vzj pyb tdvc hky iznq yk Ndwe trz gaxevlmyawayyx ute xlqcxe se Bjfhizcwr ivx vvscw pfl Eboapr ov ute Blyjuv trz zjwv vlmyurwo bc ute isckivun, jtjsr fbrdor erk nzh. Igywpuxa mcyjx i vllxrv hd Lmbw, bsdwgaihjon nnf mesdqp ynlhnsv jleyb. Ptn ksqhb kiecpej dx op hibl qm muw jk utarjlb qk xslvhasvg, okgx ino oad."""
 
+    encrypted_text_6B = """Ykuf rqhuddq rgz ppismxooeyz ud ogmp prlzqa er lop nlovktvfnx oyzcqdzov dve cxuaibk vg Lbejrvpsl arh dtwobnim lw Dfgg ta uqg onb lr fln mgmd, rp ybvigkx vx dbo Qxugbuv. Ok lqlpgh rov amgi ukrdphdo qeo ei giukx ivd ly Jlzipege lw vfdb Mdbsgzkc Gsysoooi oeo Boptemmk Hcrocvn, lwd jok Sigw codt jgzcvlsy oyv, touriwmhfd lzq kuai ia wbo Oamkh dngeqbto e icugkf, gyucz iesq pu g aka nfmel clztmvin rrir dbo Bvghj. Bqyhgckm sjilpizq jl xeelpz jsn oycqim jmdhkip ia wbo Aobmbo lw e sogl yv oabxcen, dbo Qxugbuv njcdnv bqu uqg vajt cl ioxgb jvpubautd sqyctmnn trh, da ufe kvpfbsnv yv waxk, zq jaa mmrizov jgmmumxel jthybajvcpk. L whmrbv cmw igkqrnv ly rov Aonguk wb oxg gdmvt gj jok Eumctgd, ydh, paytv gnk, Aubsfndm ygn eebo dy lsiv mweiuho iy xii xrzilm inlcrn ybodt qg kac ukpjnv ly rov Gsbigcr’k fyr nldpiaegee. Zsh vgmro rei a wgmeffka illhw pu mt, ipj l beqbadd oriel fi lzd jsn ctqctme. Gr jaa vqqw ei a vtib nfwa oftg ly ddlee rf ybgu ov cmw tll dqawyzoqsq enapv. Pyrhgbk, xntouxtx, wx oxg nisddmoi rvx ric lwkd zeiwin wcun dy jsn qywwi; rvx sy botnvh flaute, cbg ybodtkgb stlly iu delgtia kcvt iykngllqm, qii ngxk aoh ur mnq sinw; tlx xsg a aqbhsg iuqq cp lnatqbh nn jec mkcri pgxivhg md jok pqjw yb xliuod ku qmszsdy. Roxa immsiflx yei sehtoactd ja oxg ksmv-anpird ryruob roth jc drd jqnn toulkgh hs scgkfn yz rov Gsbigcr’k zuksoeo. Zggkumcb kuap bl wisc ke idpferpsej hjc gxpgrpuoi Krsoidkbe Byzkdlyn ta pxi eka efrgbbli yv ddt jriceraq. Ov cmw uoirenv cqro pgakvvvs ric nbohxdo birwe mpdb Aoqvzgnkr ipj icehqm wbopi uc qiyjtgbu Helqgfsy. So yei iesq pxie lzoo dbo nlpa gj jok Qigcj kon igdcgqkx. Klzoirvda kpauk wx iea illhw md jok pqjw iz o qvhpcv uc Qoou zmrto hjc pvrfl gaq tqanto ddt acnnnzi ia Zey et ufe anat gx uqg autnsbkiefi ia Zeboqn Irdnoizyn Hdogiee GS lnz Lyfxoi Hgtpgyh Xyzigthww. “Et irq nffbqnpdy odrxsqg hq gyg zyid mbvgxpogzr rgz cpirl Eumctgd Mnkqdkrv fi hcswdt Uer Paxipo pn hjq Entpxigv Usyqzgun trh miu uwy jpipq un ko up ufe nfwa gx uqg Aubtn Wczkdpigdk. Yuqg heogct Megxsgzg oiy okpgmjd ueqv jok ddpog gx ndsj a fley, vvd iv ald zg nau xecfrgb rov Sgviw pexfpg plt ueiwkey wx oxg yqri hjct dcm ulm lo kbig pxgu uwy jedl zlxr jem. Dcm rnzd sq uqep etukbnpqgzct ctgg g fidrvpgh ksf awqwtefk oxep rov hbakucr Clzumcbp bmw jok Qigcj mbm xa sacnmpe iea iysuybdige gb oxg Zigwb. Kxkqk fln Hebvriimnc ufeuhcddqn tto ktqmuqkm hg urlg skuo cl ric Sgjty, Smzwrwmk pw ez qmdsmdim Xwuln ezj ov kwwj yk yrfbfoj yvngpi ok qoy vgirgnq pxi nkqyaehy ia wbo Emskrslz sqpovti. Ddt Wwjnf cqnq ag bculzednv, yb ald, qgkv aiiskm ezj tkgbmaek oiv srgm pxdl bgd lzq mpiaq. Rgz iu jl lzq hcvobuq fmpj lr fln dtwq nwybm aa Isdpoylo vg cjeuo lzq uaho ia wbo nkelz nnqigb rgz gj jok Qigcj qrnvdv ykqh gb oeko vt igdcgqkx. Yydil rovr qd evhb vn qomdmvz tm jok cbzegzr Ytlyzaemcb Buzhqnp yv Ygg."""
+
     text_1A = Affine(encrypted_text_1A, switch=(1, 5))
     text_4B = Viginere(encrypted_text_4B, key="arcanaimperii")
     text_6A = Viginere(encrypted_text_6A, key="zeus")
+    text_6B = AffineViginere(encrypted_text_6B)
     # print(text_6A.encipher())
     # print(len(letters(text_4B.text)))
     text_5B = Viginere(encrypted_text_5B, key="arcanaimperii", beaufort=True)
-    """
-    for possible_shift in range(26):
-        shifted_text = Caesar(
-            letters(text_4B.text).lower()[0::13], shift=possible_shift, forced=True).encipher()
-        print(shifted_text)
-        print(collections.Counter(shifted_text))
-        print(possible_shift, english_1gram_chi(shifted_text))
-    """
-    y = """oagwtmtawzemramejrbjttzvvdnckzmfskxeprciavkrsgdomgdygnvgaaijosrheglyczebacuiiwzihqsmiektyncoiimtgluuovrelphevrbgtzelzxcqewnhrsrajipjaagmndpdaofkwepjkilganchtfivxdlqincewdetbsnmbnkotaoyjpeqnacfspjielrvfiofprdwixovepqbrrmdztfaalijiicpveveinbsmbcmqzdkbemnqmvbqizea"""
     # print(y == letters(text_4B.text[0::13]).lower())
     # print(letters(text_4B.text[0::13]).lower())
     # print(collections.Counter(y))
     y = letters(text_4B.text)[0::13].lower()
-    print(text_4B.prob_key)
+    # print(text_6B.encipher())
+    text_1A = AffineViginere(encrypted_text_1A)
+    print(text_1A.encipher())
