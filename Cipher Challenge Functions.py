@@ -102,6 +102,7 @@ def codex(text):
 
 
 english_4gram_expected_dict = dict()
+"""
 with open("english_quadgrams.txt") as f:
     total = 0
     for line in f:
@@ -110,9 +111,19 @@ with open("english_quadgrams.txt") as f:
         total += int(line[1])
     for key, count in english_4gram_expected_dict.items():
         english_4gram_expected_dict[key] = math.log10(count/total)
+"""
 
 
 def english_quadgram_fitness(text):
+    if not english_4gram_expected_dict:
+        with open("english_quadgrams.txt") as f:
+            total = 0
+            for line in f:
+                line = line.split(" ")
+                english_4gram_expected_dict[line[0]] = int(line[1])
+                total += int(line[1])
+            for key, count in english_4gram_expected_dict.items():
+                english_4gram_expected_dict[key] = math.log10(count/total)
     fitness = 0
     text = letters(text).upper()
     for index in range(len(text) - 3):
@@ -359,21 +370,6 @@ class Scytale:
 
 
 if __name__ == "__main__":
-    """
-    text_1A = Affine(cipher_texts.Challenge2017.encrypted_text_1A, switch=(1, 5))
-    text_4B = Viginere(cipher_texts.Challenge2017.encrypted_text_4B, key="arcanaimperii")
-    text_6A = Viginere(cipher_texts.Challenge2017.encrypted_text_6A, key="zeus")
-    text_6B = AffineViginere(cipher_texts.Challenge2017.encrypted_text_6B)
-    # print(text_6A.encipher())
-    # print(len(letters(text_4B.text)))
-    text_5B = Viginere(cipher_texts.Challenge2017.encrypted_text_5B, key="arcanaimperii", beaufort=True)
-    # print(y == letters(text_4B.text[0::13]).lower())
-    # print(letters(text_4B.text[0::13]).lower())
-    # print(collections.Counter(y))
-    y = letters(text_4B.text)[0::13].lower()
-    # print(text_6B.encipher())
-    text_5B = AffineViginere(cipher_texts.Challenge2017.encrypted_text_5B)
-    print(text_5B.encipher())
-    """
-    text_2B = Scytale(cipher_texts.Challenge2017.encrypted_text_2B)
-    print(text_2B.encipher())
+    text_1A = Caesar(cipher_texts.Challenge2018.encrypted_text_1A)
+    print(text_1A.encipher())
+    pass
