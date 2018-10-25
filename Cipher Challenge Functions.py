@@ -54,16 +54,13 @@ def auto_freq_analyser(text):
     text = letters(text).lower()
     for character in text:
         local_alphabet_freq[character] += 1
-    freq_table = list()
-    for key, value in local_alphabet_freq.items():
-        value *= 100 / len(text)
-        freq_table.append(CharFreq(character=key, frequency=value))
+    freq_table = [
+        CharFreq(character=key, frequency=value*100/len(text))
+        for key, value in local_alphabet_freq.items()
+    ]
     return sorted(
         list(freq_table), key=lambda elem: elem.frequency, reverse=True
     )
-    return [tuple(elem) for elem in sorted(
-        list(freq_table), key=lambda elem: elem.frequency, reverse=True
-    )]
 
 
 def english_1gram_chi(text):
@@ -213,9 +210,9 @@ class Viginere:
         shifts = []
         for split in split_text:
             modal_char = auto_freq_analyser(split)[0].character
-            split_shift = english_chars.index("e") - (
+            split_shift = (
                 english_chars.index(modal_char)
-            )
+            ) - english_chars.index("e")
             shifts.append(split_shift)
         return "".join(english_chars[shift] for shift in shifts)
 
@@ -270,5 +267,4 @@ if __name__ == "__main__":
     text_1A = Affine(encrypted_text_1A)
     text_4B = Viginere(encrypted_text_4B, key="arcanaimperii")
     text_6A = Viginere(encrypted_text_6A, key="zeus")
-    print(text_6A.encipher())
-    print(text_4B.encipher())
+    print(text_6A.prob_key)
