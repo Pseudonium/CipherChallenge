@@ -6,6 +6,7 @@ import sympy
 import scipy
 from scipy import stats
 import itertools
+from sys import getsizeof
 
 start_time = time.time()
 
@@ -98,6 +99,28 @@ def codex(text):
         count * (count - 1) for count in collections.Counter(text).values())/(
         length * (length - 1))
 
+
+english_4gram_expected_dict = dict()
+with open("english_quadgrams.txt") as f:
+    total = 0
+    for line in f:
+        line = line.split(" ")
+        english_4gram_expected_dict[line[0]] = int(line[1])
+        total += int(line[1])
+    for key, count in english_4gram_expected_dict.items():
+        english_4gram_expected_dict[key] = math.log10(count/total)
+
+
+def english_quadgram_fitness(text):
+    fitness = 0
+    text = letters(text).upper()
+    for index in range(len(text) - 3):
+        quadgram = text[index:index + 4]
+        if quadgram in english_4gram_expected_dict:
+            fitness += english_4gram_expected_dict[quadgram]
+        else:
+            fitness -= 10
+    return -1*fitness
 
 # -----------------------
 # -----------------------
@@ -376,4 +399,6 @@ B	N	Q	O	A	T	H	H	A	E	L	T	N	J	B	R	N	I	H	U	T	I	N	L	T	Z	C	T	R	N	C	O	P	E	S	M	A	G	F	L	
     #text_7B = Viginere(encrypted_text_7B)
     # print(text_7B.prob_key)
     z = letters(encrypted_text_2B)
-    print(z[2::len(z)//6])
+    print(english_quadgram_fitness(z))
+    print(english_quadgram_fitness(
+        "".join(z[i::len(z)//2] for i in range(len(z)//2))))
