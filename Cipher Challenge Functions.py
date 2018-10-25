@@ -78,7 +78,7 @@ def auto_freq_analyser(text):
         for key, value in local_alphabet_freq.items()
     ]
     return sorted(
-        list(freq_table), key=lambda elem: elem.frequency, reverse=True
+        freq_table, key=lambda elem: elem.frequency, reverse=True
     )
 
 
@@ -87,14 +87,14 @@ def english_1gram_chi(text):
     text = letters(text).lower()
     for char in text:
         counts[char] += 1
-    observed = [
+    observed = (
         count[1] for count in sorted(counts.items())
-    ]
-    expected = [
+    )
+    expected = (
         math.ceil(english_1gram_expected_dict[char] * (
             len(text) / 100)
         ) for char in english_chars
-    ]
+    )
     return sum((o - e)**2 / e for o, e in zip(observed, expected))
 
 
@@ -102,21 +102,14 @@ def codex(text):
     text = letters(text).lower()
     length = len(text)
     return sum(
-        count * (count - 1) for count in collections.Counter(text).values())/(
-        length * (length - 1))
+        count * (count - 1)
+        for count in collections.Counter(text).values()
+    )/(
+        length * (length - 1)
+    )
 
 
 english_4gram_expected_dict = dict()
-"""
-with open("english_quadgrams.txt") as f:
-    total = 0
-    for line in f:
-        line = line.split(" ")
-        english_4gram_expected_dict[line[0]] = int(line[1])
-        total += int(line[1])
-    for key, count in english_4gram_expected_dict.items():
-        english_4gram_expected_dict[key] = math.log10(count/total)
-"""
 
 
 def english_quadgram_fitness(text):
@@ -180,14 +173,14 @@ class Affine:
 
     def __init__(self, text, switch=(1, 0)):
         self.text = text
-        self.switch = Affine.Key(*switch)
+        self.key = Affine.Key(*switch)
         self.auto = bool(sum(switch) < 2)
 
     def modal_pairs(self):
-        freq_chars = [
+        freq_chars = (
             freq.character for freq in auto_freq_analyser(self.text)[0:5]
-        ]
-        return list(itertools.combinations(freq_chars, 2))
+        )
+        return itertools.combinations(freq_chars, 2)
 
     def key_generator(self):
         """
@@ -221,15 +214,35 @@ class Affine:
         ]
 
     def encipher(self, key=None):
+        """
         if key is None:
             key = self.switch
         enciphered = "".join(
             self.char_shift(char, key) if char.isalpha()
             else char for char in self.text)
         return match(self.text, enciphered)
+        """
+        if self.auto:
+            possible_texts = list()
+            for key in self.key_generator():
+                deciphered = "".join(
+                    self.char_shift(char, key) if char.isalpha()
+                    else char for char in self.text
+                )
+                possible_texts.append(
+                    Affine.TextChi(
+                        deciphered, english_1gram_chi(deciphered)
+                    )
+                )
+            enciphered = sorted(
+                possible_texts, key=lambda elem: elem.chi)[0].text
+        else:
+            enciphered = "".join(
+                self.char_shift(char, self.) if
+            )
 
     def auto_decipher(self):
-        possible_texts = []
+        possible_texts = list()
         for key in self.key_generator():
             deciphered = self.encipher(key)
             possible_texts.append(Affine.TextChi(
@@ -243,19 +256,10 @@ class Viginere:
 
     ChiShift = collections.namedtuple("ChiShift", ['chi', 'shift'])
 
-    def __init__(self, text, key="", beaufort=False):
+    def __init__(self, text, key=""):
         self.text = text
         self.key = key
         self.auto = not bool(key)
-        self.beaufort = beaufort
-
-    @staticmethod
-    def beaufort_char_shift(char, shift):
-        return english_chars[
-            (
-                shift - english_chars.index(char.lower())
-            ) % ENGLISH_LANG_LEN
-        ]
 
     @property
     def prob_key_length(self):
@@ -301,15 +305,11 @@ class Viginere:
         ]
         shifted_split = list()
         for index, split in enumerate(split_text):
-            if self.beaufort:
-                split = "".join(self.beaufort_char_shift(
-                    char, english_chars.index(self.key[index])) for char in list(split))
-            else:
-                split = Caesar(
-                    split,
-                    shift=ENGLISH_LANG_LEN-english_chars.index(self.key[index]),
-                    # Above added since vigenere keys are the complement, usually
-                ).encipher()
+            split = Caesar(
+                split,
+                shift=ENGLISH_LANG_LEN-english_chars.index(self.key[index]),
+                # Above added since vigenere keys are the complement, usually
+            ).encipher()
             shifted_split.append(split)
         enciphered = "".join(
             "".join(chunk)
@@ -331,12 +331,12 @@ class AffineViginere:
                 (switch, 0) for switch in range(26)
                 if math.gcd(switch, 26) == 1
             ]
-            aff_texts = [Affine(self.text, switch=possible_switch).encipher()
-                         for possible_switch in possible_switches]
-            vig_texts = [Viginere(aff_text).encipher()
-                         for aff_text in aff_texts]
-            possible_texts = [Affine.TextChi(
-                text=vig_text, chi=english_1gram_chi(vig_text)) for vig_text in vig_texts]
+            aff_texts = (Affine(self.text, switch=possible_switch).encipher()
+                         for possible_switch in possible_switches)
+            vig_texts = (Viginere(aff_text).encipher()
+                         for aff_text in aff_texts)
+            possible_texts = (Affine.TextChi(
+                text=vig_text, chi=english_1gram_chi(vig_text)) for vig_text in vig_texts)
             enciphered = sorted(
                 possible_texts, key=lambda text_chi: text_chi.chi)[0].text
         else:
@@ -356,7 +356,7 @@ class Scytale:
     def encipher(self):
         text = letters(self.text).lower()
         if self.auto:
-            possible_texts = []
+            possible_texts = list()
             for length in range(1, 10):
                 possible_text = "".join(
                     text[i::len(text)//length] for i in range(len(text)//length))
@@ -369,8 +369,10 @@ class Scytale:
             enciphered = sorted(
                 possible_texts, key=lambda text_fit: text_fit.fitness)[0].text
         else:
-            enciphered = "".join(text[i::len(text)//self.key]
-                                 for i in range(len(text)//self.key))
+            enciphered = "".join(
+                text[i::len(text)//self.key]
+                for i in range(len(text)//self.key)
+            )
         return enciphered
 
 
@@ -383,8 +385,8 @@ if __name__ == "__main__":
     solution_2A = text_2A.encipher()
     text_2B = Affine(cipher_texts.Challenge2018.encrypted_text_2B)
     solution_2B = text_2B.auto_decipher()
-    text_3A = Affine(cipher_texts.Challenge2018.encrypted_text_3A)
-    solution_3A = text_3A.auto_decipher()
+    text_3A = AffineViginere(cipher_texts.Challenge2018.encrypted_text_3A)
+    solution_3A = text_3A.encipher()
     text_3B = letters(cipher_texts.Challenge2018.encrypted_text_3B).lower()
     solution_3B = match(
         cipher_texts.Challenge2018.encrypted_text_3B,
@@ -420,10 +422,9 @@ if __name__ == "__main__":
             }
         )
     )
-    #print("1A: ", solution_1A)
-    #print("1B: ", solution_1B)
-    #print("2A: ", solution_2A)
-    #print("2B: ", solution_2B)
-    #print("3A: ", solution_3A)
+    print("1A: ", solution_1A)
+    print("1B: ", solution_1B)
+    print("2A: ", solution_2A)
+    print("2B: ", solution_2B)
+    print("3A: ", solution_3A)
     print("3B: ", solution_3B)
-    pass
