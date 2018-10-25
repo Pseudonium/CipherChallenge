@@ -85,8 +85,8 @@ def english_1gram_chi(text):
     ]
     expected = [
         math.ceil(english_1gram_expected_dict[char] * (
-            len(text) / 100) for char in english_chars
-        )
+            len(text) / 100)
+        ) for char in english_chars
     ]
     return sum((o - e)**2 / e for o, e in zip(observed, expected))
 
@@ -238,11 +238,21 @@ class Viginere:
         ]
         shifts = []
         for split in split_text:
+            """
             modal_char = auto_freq_analyser(split)[0].character
             split_shift = (
                 english_chars.index(modal_char)
             ) - english_chars.index("e")
             shifts.append(split_shift)
+            """
+            split_shifts = list()
+            for possible_shift in range(26):
+                shifted_text = Caesar(
+                    split, shift=possible_shift, forced=True).encipher()
+                split_shifts.append(
+                    (english_1gram_chi(shifted_text), possible_shift))
+            split_shift = sorted(split_shifts)[0][1]
+            shifts.append(-1*split_shift % ENGLISH_LANG_LEN)
         return "".join(english_chars[shift] for shift in shifts)
 
     def encipher(self):
@@ -319,4 +329,4 @@ BTDWV EPO IGAQ OV YJWK AMAIEH SOZ FWI KZCTY KN GHM EEMIQBURN HBMM AU XYM IMRBOAS
     # print(letters(text_4B.text[0::13]).lower())
     # print(collections.Counter(y))
     y = letters(text_4B.text)[0::13].lower()
-    print(text_5B.encipher())
+    print(text_4B.prob_key)
