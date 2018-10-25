@@ -16,6 +16,20 @@ start_time = time.time()
 # -----------------------
 
 
+def match(original, formatted):
+    formatted = list(formatted)
+    for index, value in enumerate(formatted):
+        # print(index)
+        if not original[index].isalpha():
+            formatted.insert(index, original[index])
+        elif original[index].isupper():
+            formatted[index] = formatted[index].upper()
+        # print(formatted)
+    if not original[-1].isalpha():  # Above loop does miss last character
+        formatted.append(original[-1])
+    return "".join(formatted)
+
+
 def letters(string):
     return "".join([character for character in string if character.isalpha()])
 
@@ -81,7 +95,7 @@ def english_1gram_chi(text):
     text = letters(text).lower()
     for char in text:
         counts[char] += 1
-    #counts = [freq[1] for freq in sorted(collections.Counter(text).items())]
+    # counts = [freq[1] for freq in sorted(collections.Counter(text).items())]
     observed = [
         count[1] for count in sorted(counts.items())
     ]
@@ -293,17 +307,26 @@ BTDWV EPO IGAQ OV YJWK AMAIEH SOZ FWI KZCTY KN GHM EEMIQBURN HBMM AU XYM IMRBOAS
     # print(text_6A.encipher())
     # print(len(letters(text_4B.text)))
     text_5B = Viginere(encrypted_text_5B, key="arcanaimperii")
+    """
     for possible_shift in range(26):
         shifted_text = Caesar(
             letters(text_4B.text).lower()[0::13], shift=possible_shift, forced=True).encipher()
         print(shifted_text)
         print(collections.Counter(shifted_text))
         print(possible_shift, english_1gram_chi(shifted_text))
+    """
     y = """oagwtmtawzemramejrbjttzvvdnckzmfskxeprciavkrsgdomgdygnvgaaijosrheglyczebacuiiwzihqsmiektyncoiimtgluuovrelphevrbgtzelzxcqewnhrsrajipjaagmndpdaofkwepjkilganchtfivxdlqincewdetbsnmbnkotaoyjpeqnacfspjielrvfiofprdwixovepqbrrmdztfaalijiicpveveinbsmbcmqzdkbemnqmvbqizea"""
-    #print(y == letters(text_4B.text[0::13]).lower())
+    # print(y == letters(text_4B.text[0::13]).lower())
     # print(letters(text_4B.text[0::13]).lower())
     # print(collections.Counter(y))
     y = letters(text_4B.text)[0::13].lower()
     # print(y)
     # print(sorted(collections.Counter(y)))
     # print(english_1gram_chi(y))
+    test1 = "Jello F ah, tfyNng to"
+    test2 = "helloiamtryingto"
+    a = encrypted_text_4B
+    b = text_4B.encipher().rstrip()
+    print(len(letters(b)))
+    print(len(b))
+    print(match(a, b))
