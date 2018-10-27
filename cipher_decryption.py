@@ -367,6 +367,46 @@ class Scytale:
         return enciphered
 
 
+class MonoSub:
+
+    TextFit = collections.namedtuple('TextFitness', ['text', 'fitness'])
+
+    def __init__(self, text: str, key: dict={}):
+        self.text = text
+        self.key = key
+
+    @property
+    def prob_key(self):
+        possible_keys = list()
+        possible_keys.extend(
+            MonoSub.TextFit(
+                text=Affine(self.text, switch=(key.a, key.b)).encipher(),
+                fitness=english_quadgram_fitness(
+                    Affine(self.text, switch=(key.a, key.b)).encipher()
+                )
+            ) for key in Affine(self.text).prob_keys
+        )
+        analysed = auto_freq_analyser(self.text)
+        print(analysed, len(analysed))
+        for char in english_1gram_expected_dict:
+            if all(char not in char_freq.character for char_freq in analysed):
+                analysed.append(CharFreq(character=char, frequency=0))
+        print("NEW", analysed, len(analysed))
+        current_key = {
+            observed.character: expected
+            for observed, expected in zip(
+                analysed,
+                english_1gram_expected_dict
+            )
+        }
+        return current_key
+
+    @staticmethod
+    def new_key(key):
+
+        pass
+
+
 if __name__ == "__main__":
     text_1A = Caesar(cipher_texts.Challenge2018.encrypted_text_1A)
     solution_1A = text_1A.encipher()
@@ -413,9 +453,10 @@ if __name__ == "__main__":
             }
         )
     )
-    print("1A: ", solution_1A)
-    print("1B: ", solution_1B)
-    print("2A: ", solution_2A)
-    print("2B: ", solution_2B)
-    print("3A: ", solution_3A)
-    print("3B: ", solution_3B)
+    #print("1A: ", solution_1A)
+    #print("1B: ", solution_1B)
+    #print("2A: ", solution_2A)
+    #print("2B: ", solution_2B)
+    #print("3A: ", solution_3A)
+    #print("3B: ", solution_3B)
+    print(MonoSub(cipher_texts.Challenge2017.encrypted_text_1A).prob_key)
