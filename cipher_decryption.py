@@ -68,7 +68,7 @@ CharFreq = collections.namedtuple(
     'CharacterFrequency', ['character', 'frequency'])
 
 
-def auto_freq_analyser(text):
+def auto_freq_analyser(text: str):
     local_alphabet_freq = collections.defaultdict(int)
     text = letters(text).lower()
     for character in text:
@@ -82,7 +82,7 @@ def auto_freq_analyser(text):
     )
 
 
-def english_1gram_chi(text):
+def english_1gram_chi(text: str):
     counts = {char: 0 for char in english_chars}
     text = letters(text).lower()
     for char in text:
@@ -98,7 +98,7 @@ def english_1gram_chi(text):
     return sum((o - e)**2 / e for o, e in zip(observed, expected))
 
 
-def codex(text):
+def codex(text: str):
     text = letters(text).lower()
     length = len(text)
     return sum(
@@ -112,7 +112,7 @@ def codex(text):
 english_4gram_expected_dict = dict()
 
 
-def english_quadgram_fitness(text):
+def english_quadgram_fitness(text: str):
     if not english_4gram_expected_dict:
         with open("english_quadgrams.txt") as f:
             total = 0
@@ -140,13 +140,13 @@ def english_quadgram_fitness(text):
 
 
 class Caesar:
-    def __init__(self, text, shift=0, forced=False):
+    def __init__(self, text: str, shift: int=0, forced: bool=False):
         self.text = text
         self.shift = shift
         self.auto = not (bool(self.shift) or forced)
 
     @staticmethod
-    def char_shift(char, shift):
+    def char_shift(char: str, shift: int):
         return english_chars[
             (
                 shift + english_chars.index(char.lower())
@@ -171,7 +171,7 @@ class Affine:
     Key = collections.namedtuple('AffineKey', ['a', 'b'])
     TextChi = collections.namedtuple('TextChi', ['text', 'chi'])
 
-    def __init__(self, text, switch=(1, 0)):
+    def __init__(self, text: str, switch: tuple=(1, 0)):
         self.text = text
         self.key = Affine.Key(*switch)
         self.auto = bool(sum(switch) < 2)
@@ -209,13 +209,13 @@ class Affine:
         return possible_keys
 
     @staticmethod
-    def char_shift(char, key):
+    def char_shift(char: str, key):
         return english_chars[
             (english_chars.index(char.lower())*key.a + key.b)
             % ENGLISH_LANG_LEN
         ]
 
-    def encipher(self, key=None):
+    def encipher(self):
         if self.auto:
             possible_texts = list()
             for key in self.prob_keys:
@@ -242,7 +242,7 @@ class Viginere:
 
     ChiShift = collections.namedtuple("ChiShift", ['chi', 'shift'])
 
-    def __init__(self, text, key=""):
+    def __init__(self, text: str, key: str=""):
         self.text = text
         self.key = key
         self.auto = not bool(key)
@@ -307,7 +307,7 @@ class Viginere:
 
 
 class AffineViginere:
-    def __init__(self, text, key="", switch=(1, 0)):
+    def __init__(self, text: str, key: str="", switch: tuple=(1, 0)):
         self.text = text
         self.key = key
         self.switch = Affine.Key(*switch)
@@ -337,7 +337,7 @@ class AffineViginere:
 class Scytale:
     TextFit = collections.namedtuple("TextFitness", ['text', 'fitness'])
 
-    def __init__(self, text, key=1, auto=True):
+    def __init__(self, text: str, key: int=1, auto: bool=True):
         self.text = text
         self.key = key
         self.auto = auto
