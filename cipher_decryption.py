@@ -8,6 +8,7 @@ from scipy import stats
 import itertools
 from sys import getsizeof
 import cipher_texts
+import random
 
 start_time = time.time()
 
@@ -18,7 +19,7 @@ start_time = time.time()
 # -----------------------
 
 
-def match(original, formatted):
+def match(original: str, formatted: str) -> str:
     formatted = list(formatted)
     for index, value in enumerate(formatted):
         if not original[index].isalpha() and formatted[index].isalpha():
@@ -28,15 +29,8 @@ def match(original, formatted):
     return "".join(formatted)
 
 
-def letters(string):
+def letters(string: str) -> str:
     return "".join(character for character in string if character.isalpha())
-
-
-def mono_substitute(text, substitutions):
-    return "".join(
-        substitutions[char] if char in substitutions
-        else char for char in text
-    )
 
 # -----------------------
 # -----------------------
@@ -65,10 +59,16 @@ english_1gram_expected_dict = {
 }
 
 CharFreq = collections.namedtuple(
-    'CharacterFrequency', ['character', 'frequency'])
+    'CharacterFrequency', ['character', 'frequency']
+)
+TextFit = collections.namedtuple(
+    "TextFitness", ['text', 'fitness']
+)
+
+TextKey = collections.namedtuple("TextKey", ['text', 'key'])
 
 
-def auto_freq_analyser(text):
+def auto_freq_analyser(text: str) -> list:
     local_alphabet_freq = collections.defaultdict(int)
     text = letters(text).lower()
     for character in text:
@@ -82,7 +82,7 @@ def auto_freq_analyser(text):
     )
 
 
-def english_1gram_chi(text):
+def english_1gram_chi(text: str) -> float:
     counts = {char: 0 for char in english_chars}
     text = letters(text).lower()
     for char in text:
@@ -98,7 +98,7 @@ def english_1gram_chi(text):
     return sum((o - e)**2 / e for o, e in zip(observed, expected))
 
 
-def codex(text):
+def codex(text: str) -> float:
     text = letters(text).lower()
     length = len(text)
     return sum(
@@ -112,7 +112,7 @@ def codex(text):
 english_4gram_expected_dict = dict()
 
 
-def english_quadgram_fitness(text):
+def english_quadgram_fitness(text: str) -> float:
     if not english_4gram_expected_dict:
         with open("english_quadgrams.txt") as f:
             total = 0
@@ -140,20 +140,20 @@ def english_quadgram_fitness(text):
 
 
 class Caesar:
-    def __init__(self, text, shift=0, forced=False):
+    def __init__(self, text: str, shift: int=0, forced: bool=False):
         self.text = text
         self.shift = shift
         self.auto = not (bool(self.shift) or forced)
 
     @staticmethod
-    def char_shift(char, shift):
+    def char_shift(char: str, shift: int) -> str:
         return english_chars[
             (
                 shift + english_chars.index(char.lower())
             ) % ENGLISH_LANG_LEN
         ]
 
-    def encipher(self):
+    def encipher(self) -> str:
         if self.auto:
             modal_char = auto_freq_analyser(self.text)[0].character
             self.shift = (
@@ -163,15 +163,15 @@ class Caesar:
             self.char_shift(char, self.shift) if char.isalpha()
             else char for char in self.text
         )
-        return match(self.text, enciphered)
+        return TextKey(match(self.text, enciphered), self.shift)
 
 
 class Affine:
 
     Key = collections.namedtuple('AffineKey', ['a', 'b'])
-    TextChi = collections.namedtuple('TextChi', ['text', 'chi'])
+    TextChiKey = collections.namedtuple('TextChiKey', ['text', 'chi', 'key'])
 
-    def __init__(self, text, switch=(1, 0)):
+    def __init__(self, text: str, switch: tuple=(1, 0)):
         self.text = text
         self.key = Affine.Key(*switch)
         self.auto = bool(sum(switch) < 2)
@@ -184,7 +184,7 @@ class Affine:
         return itertools.combinations(freq_chars, 2)
 
     @property
-    def prob_keys(self):
+    def prob_keys(self) -> list:
         """
         a*c1 + b = p1
         a*c2 + b = p2
@@ -209,13 +209,13 @@ class Affine:
         return possible_keys
 
     @staticmethod
-    def char_shift(char, key):
+    def char_shift(char: str, key) -> str:
         return english_chars[
             (english_chars.index(char.lower())*key.a + key.b)
             % ENGLISH_LANG_LEN
         ]
 
-    def encipher(self, key=None):
+    def encipher(self) -> str:
         if self.auto:
             possible_texts = list()
             for key in self.prob_keys:
@@ -224,31 +224,35 @@ class Affine:
                     else char for char in self.text
                 )
                 possible_texts.append(
-                    Affine.TextChi(
-                        deciphered, english_1gram_chi(deciphered)
+                    Affine.TextChiKey(
+                        text=deciphered,
+                        chi=english_1gram_chi(deciphered),
+                        key=key
                     )
                 )
-            enciphered = sorted(
-                possible_texts, key=lambda elem: elem.chi)[0].text
+            best = sorted(
+                possible_texts, key=lambda elem: elem.chi)[0]
+            enciphered = best.text
+            self.key = best.key
         else:
             enciphered = "".join(
                 self.char_shift(char, self.key) if char.isalpha()
                 else char for char in self.text
             )
-        return match(self.text, enciphered)
+        return TextKey(match(self.text, enciphered), self.key)
 
 
 class Viginere:
 
     ChiShift = collections.namedtuple("ChiShift", ['chi', 'shift'])
 
-    def __init__(self, text, key=""):
+    def __init__(self, text: str, key: str=""):
         self.text = text
         self.key = key
         self.auto = not bool(key)
 
     @property
-    def prob_key_length(self):
+    def prob_key_length(self) -> int:
         text = letters(self.text).lower()
         for possible_length in range(1, 1000):
             split_text = (
@@ -271,7 +275,7 @@ class Viginere:
         )
 
     @property
-    def prob_key(self):
+    def prob_key(self) -> str:
         shifts = list()
         for split in self.split_text:
             split_shifts = list()
@@ -288,7 +292,7 @@ class Viginere:
             shifts.append(-1*split_shift % ENGLISH_LANG_LEN)
         return "".join(english_chars[shift] for shift in shifts)
 
-    def encipher(self):
+    def encipher(self) -> str:
         if self.auto:
             self.key = self.prob_key
         shifted_split = list()
@@ -307,13 +311,13 @@ class Viginere:
 
 
 class AffineViginere:
-    def __init__(self, text, key="", switch=(1, 0)):
+    def __init__(self, text: str, key: str="", switch: tuple=(1, 0)):
         self.text = text
         self.key = key
         self.switch = Affine.Key(*switch)
         self.auto = bool(sum(switch) < 2)
 
-    def encipher(self):
+    def encipher(self) -> str:
         if self.auto:
             possible_switches = (
                 (switch, 0) for switch in range(26)
@@ -324,7 +328,9 @@ class AffineViginere:
             vig_texts = (Viginere(aff_text).encipher()
                          for aff_text in aff_texts)
             possible_texts = (
-                Affine.TextChi(text=vig_text, chi=english_1gram_chi(vig_text))
+                Affine.TextChiKey(
+                    text=vig_text, chi=english_1gram_chi(vig_text), key=None
+                )
                 for vig_text in vig_texts)
             enciphered = sorted(
                 possible_texts, key=lambda text_chi: text_chi.chi)[0].text
@@ -337,12 +343,12 @@ class AffineViginere:
 class Scytale:
     TextFit = collections.namedtuple("TextFitness", ['text', 'fitness'])
 
-    def __init__(self, text, key=1, auto=True):
+    def __init__(self, text: str, key: int=1, auto: bool=True):
         self.text = text
         self.key = key
         self.auto = auto
 
-    def encipher(self):
+    def encipher(self) -> str:
         text = letters(self.text).lower()
         if self.auto:
             possible_texts = list()
@@ -352,7 +358,7 @@ class Scytale:
                     for i in range(len(text)//length)
                 )
                 possible_texts.append(
-                    Scytale.TextFit(
+                    TextFit(
                         text=possible_text,
                         fitness=english_quadgram_fitness(possible_text)
                     )
@@ -367,7 +373,77 @@ class Scytale:
         return enciphered
 
 
+class MonoSub:
+
+    KeyFit = collections.namedtuple('KeyFitness', ['key', 'fitness'])
+    CharSwap = collections.namedtuple('CharSwap', ['char', 'swap_char'])
+
+    def __init__(self, text: str, key: dict={}):
+        self.text = text
+        self.key = key
+
+    @property
+    def prob_key(self):
+        analysed = auto_freq_analyser(self.text)
+        for char in english_1gram_expected_dict:
+            if all(char not in char_freq.character for char_freq in analysed):
+                analysed.append(CharFreq(character=char, frequency=0))
+        current_key = {
+            observed.character: expected
+            for observed, expected in zip(
+                analysed,
+                english_1gram_expected_dict
+            )
+        }
+        return current_key
+
+    @staticmethod
+    def new_key(key, swap):
+        new_key = list(MonoSub.CharSwap(*item) for item in key.items())
+        pair = [new_key[swap[0]], new_key[swap[1]]]
+        a = pair[0].swap_char
+        b = pair[1].swap_char
+        pair[0] = MonoSub.CharSwap(char=pair[0].char, swap_char=b)
+        pair[1] = MonoSub.CharSwap(char=pair[1].char, swap_char=a)
+        (new_key[swap[0]],
+         new_key[swap[1]]) = pair[0], pair[1]
+        new_key = dict(new_key)
+        return new_key
+
+    @property
+    def best_key(self):
+        current_key = self.prob_key
+        for count in range(1000):
+            parent_text = self.encipher(key=current_key)
+            parent_fit = english_quadgram_fitness(parent_text)
+            possible_keys = [MonoSub.KeyFit(current_key, parent_fit)]
+            for swap in itertools.combinations(range(26), 2):
+                new_key = self.new_key(current_key, swap)
+                child_text = self.encipher(key=new_key)
+                child_fit = english_quadgram_fitness(child_text)
+                possible_keys.append(MonoSub.KeyFit(new_key, child_fit))
+            best_new_key = sorted(
+                possible_keys,
+                key=lambda x: x.fitness
+            )[0].key
+            if current_key == best_new_key:
+                return current_key
+            else:
+                current_key = best_new_key
+        return current_key
+
+    def encipher(self, key: dict={}):
+        if not key:
+            key = self.best_key
+        enciphered = "".join(
+            key[char] if char in key
+            else char for char in self.text.lower()
+        )
+        return match(self.text, enciphered)
+
+
 if __name__ == "__main__":
+    """
     text_1A = Caesar(cipher_texts.Challenge2018.encrypted_text_1A)
     solution_1A = text_1A.encipher()
     text_1B = Caesar(cipher_texts.Challenge2018.encrypted_text_1B)
@@ -376,46 +452,23 @@ if __name__ == "__main__":
     solution_2A = text_2A.encipher()
     text_2B = Affine(cipher_texts.Challenge2018.encrypted_text_2B)
     solution_2B = text_2B.encipher()
+    print(solution_2B.key)
     text_3A = AffineViginere(cipher_texts.Challenge2018.encrypted_text_3A)
     solution_3A = text_3A.encipher()
-    text_3B = letters(cipher_texts.Challenge2018.encrypted_text_3B).lower()
-    solution_3B = match(
-        cipher_texts.Challenge2018.encrypted_text_3B,
-        mono_substitute(
-            text_3B,
-            substitutions={
-                'l': 'A',
-                'o': 'B',
-                'y': 'C',
-                'a': 'D',
-                't': 'E',
-                'z': 'F',
-                'b': 'G',
-                'c': 'H',
-                'd': 'I',
-                'e': 'J',
-                'f': 'K',
-                'g': 'L',
-                'h': 'M',
-                'i': 'N',
-                'j': 'O',
-                'k': 'P',
-                'm': 'Q',
-                'n': 'R',
-                'p': 'S',
-                'q': 'T',
-                'r': 'U',
-                's': 'V',
-                'u': 'W',
-                'v': 'X',
-                'w': 'Y',
-                'x': 'Z'
-            }
-        )
-    )
-    print("1A: ", solution_1A)
-    print("1B: ", solution_1B)
-    print("2A: ", solution_2A)
-    print("2B: ", solution_2B)
-    print("3A: ", solution_3A)
-    print("3B: ", solution_3B)
+    text_3B = MonoSub(cipher_texts.Challenge2018.encrypted_text_3B)
+    solution_3B = text_3B.encipher()
+    """
+    #print("1A: ", solution_1A)
+    #print("1B: ", solution_1B)
+    #print("2A: ", solution_2A)
+    #print("2B: ", solution_2B)
+    #print("3A: ", solution_3A)
+    # print("3B: ", solution_3B
+    """
+    text_2_1A = MonoSub(cipher_texts.Challenge2017.encrypted_text_1A)
+    text_2_3B = MonoSub(cipher_texts.Challenge2018.encrypted_text_3B)
+    print(text_2_1A.encipher())
+    """
+    # print(solution_3B)
+    # for item in itertools.combinations(range(26), 2):
+    # print(item)
