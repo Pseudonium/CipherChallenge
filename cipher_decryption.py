@@ -8,6 +8,7 @@ from scipy import stats
 import itertools
 from sys import getsizeof
 import cipher_texts
+import random
 
 start_time = time.time()
 
@@ -379,19 +380,17 @@ class MonoSub:
     def prob_key(self):
         possible_keys = list()
         possible_keys.extend(
-            MonoSub.TextFit(
+            (MonoSub.TextFit(
                 text=Affine(self.text, switch=(key.a, key.b)).encipher(),
                 fitness=english_quadgram_fitness(
                     Affine(self.text, switch=(key.a, key.b)).encipher()
                 )
-            ) for key in Affine(self.text).prob_keys
+            ), key) for key in Affine(self.text).prob_keys
         )
         analysed = auto_freq_analyser(self.text)
-        print(analysed, len(analysed))
         for char in english_1gram_expected_dict:
             if all(char not in char_freq.character for char_freq in analysed):
                 analysed.append(CharFreq(character=char, frequency=0))
-        print("NEW", analysed, len(analysed))
         current_key = {
             observed.character: expected
             for observed, expected in zip(
@@ -402,9 +401,50 @@ class MonoSub:
         return current_key
 
     @staticmethod
-    def new_key(key):
+    def new_key(key, swap):
+        new_key = list(key.items())
+        pair = [list(new_key[swap[0]]), list(new_key[swap[1]])]
+        pair[0][1], pair[1][1] = pair[1][1], pair[0][1]
+        (new_key[swap[0]],
+         new_key[swap[1]]) = tuple(pair[0]), tuple(pair[1])
+        new_key = dict(new_key)
+        return new_key
 
-        pass
+    def best_key(self, initial_key):
+        #temperature = 40
+        #temp_step = 40/1000
+        current_key = initial_key
+        for count in range(1000):
+            parent_text = self.encipher(key=current_key)
+            parent_fit = english_quadgram_fitness(parent_text)
+            possible_keys = [(current_key, parent_fit)]
+            for swap in itertools.combinations(range(26), 2):
+                new_key = self.new_key(current_key, swap)
+                child_text = self.encipher(key=new_key)
+                child_fit = english_quadgram_fitness(child_text)
+                possible_keys.append((new_key, child_fit))
+            best_new_key = sorted(possible_keys, key=lambda x: x[1])[0][0]
+            if current_key == best_new_key:
+                return current_key
+            else:
+                current_key = best_new_key
+            """
+            dF = -10000
+            while dF < 0:
+                new_key = self.new_key(current_key)
+                child_text = self.encipher(key=new_key)
+                child_fit = english_quadgram_fitness(child_text)
+                dF = parent_fit - child_fit
+            current_key = new_key
+            """
+            print(count)
+        return current_key
+
+    def encipher(self, key: dict={}):
+        if not key:
+            key = self.prob_key
+        enciphered = mono_substitute(letters(self.text).lower(), key)
+        return match(self.text, enciphered)
 
 
 if __name__ == "__main__":
@@ -459,4 +499,13 @@ if __name__ == "__main__":
     #print("2B: ", solution_2B)
     #print("3A: ", solution_3A)
     #print("3B: ", solution_3B)
-    print(MonoSub(cipher_texts.Challenge2017.encrypted_text_1A).prob_key)
+    text_2_1A = MonoSub(cipher_texts.Challenge2017.encrypted_text_1A)
+    text_2_3B = MonoSub(cipher_texts.Challenge2018.encrypted_text_3B)
+    x = text_2_1A.prob_key
+    print(x)
+    y = text_2_1A.best_key(x)
+    print(y)
+    print(text_2_1A.encipher(key=y))
+
+    # for item in itertools.combinations(range(26), 2):
+    # print(item)
