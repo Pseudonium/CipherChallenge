@@ -65,6 +65,8 @@ TextFit = collections.namedtuple(
     "TextFitness", ['text', 'fitness']
 )
 
+TextKey = collections.namedtuple("TextKey", ['text', 'key'])
+
 
 def auto_freq_analyser(text: str) -> list:
     local_alphabet_freq = collections.defaultdict(int)
@@ -161,13 +163,13 @@ class Caesar:
             self.char_shift(char, self.shift) if char.isalpha()
             else char for char in self.text
         )
-        return match(self.text, enciphered)
+        return TextKey(match(self.text, enciphered), self.shift)
 
 
 class Affine:
 
     Key = collections.namedtuple('AffineKey', ['a', 'b'])
-    TextChi = collections.namedtuple('TextChi', ['text', 'chi'])
+    TextChiKey = collections.namedtuple('TextChiKey', ['text', 'chi', 'key'])
 
     def __init__(self, text: str, switch: tuple=(1, 0)):
         self.text = text
@@ -222,18 +224,22 @@ class Affine:
                     else char for char in self.text
                 )
                 possible_texts.append(
-                    Affine.TextChi(
-                        deciphered, english_1gram_chi(deciphered)
+                    Affine.TextChiKey(
+                        text=deciphered,
+                        chi=english_1gram_chi(deciphered),
+                        key=key
                     )
                 )
-            enciphered = sorted(
-                possible_texts, key=lambda elem: elem.chi)[0].text
+            best = sorted(
+                possible_texts, key=lambda elem: elem.chi)[0]
+            enciphered = best.text
+            self.key = best.key
         else:
             enciphered = "".join(
                 self.char_shift(char, self.key) if char.isalpha()
                 else char for char in self.text
             )
-        return match(self.text, enciphered)
+        return TextKey(match(self.text, enciphered), self.key)
 
 
 class Viginere:
@@ -322,7 +328,9 @@ class AffineViginere:
             vig_texts = (Viginere(aff_text).encipher()
                          for aff_text in aff_texts)
             possible_texts = (
-                Affine.TextChi(text=vig_text, chi=english_1gram_chi(vig_text))
+                Affine.TextChiKey(
+                    text=vig_text, chi=english_1gram_chi(vig_text), key=None
+                )
                 for vig_text in vig_texts)
             enciphered = sorted(
                 possible_texts, key=lambda text_chi: text_chi.chi)[0].text
@@ -444,17 +452,18 @@ if __name__ == "__main__":
     solution_2A = text_2A.encipher()
     text_2B = Affine(cipher_texts.Challenge2018.encrypted_text_2B)
     solution_2B = text_2B.encipher()
+    print(solution_2B.key)
     text_3A = AffineViginere(cipher_texts.Challenge2018.encrypted_text_3A)
     solution_3A = text_3A.encipher()
-    """
     text_3B = MonoSub(cipher_texts.Challenge2018.encrypted_text_3B)
     solution_3B = text_3B.encipher()
+    """
     #print("1A: ", solution_1A)
     #print("1B: ", solution_1B)
     #print("2A: ", solution_2A)
     #print("2B: ", solution_2B)
     #print("3A: ", solution_3A)
-    print("3B: ", solution_3B)
+    # print("3B: ", solution_3B
     """
     text_2_1A = MonoSub(cipher_texts.Challenge2017.encrypted_text_1A)
     text_2_3B = MonoSub(cipher_texts.Challenge2018.encrypted_text_3B)
