@@ -487,6 +487,60 @@ class MonoSub:
             return match(self.text, enciphered)
 
 
+class DuoSub:
+    def __init__(self, text, key_square: list=[]):
+        self.text = text
+        if key_square:
+            self.key = self.create_substitution_dict(key_square)
+        self.auto = not bool(key_square)
+
+    @staticmethod
+    def duo_to_mono(text):
+        new_text = letters(text).lower()
+        split_text = list(
+            new_text[i:i + 2] for i in range(0, len(new_text), 2)
+        )
+        substitutions = {}
+        eng_index = 0
+        for bigram in split_text:
+            if bigram not in substitutions:
+                substitutions[bigram] = english_chars[eng_index]
+                eng_index += 1
+            if eng_index == 24:
+                break
+        return "".join(substitutions[bigram] for bigram in split_text)
+
+    @staticmethod
+    def create_substitution_dict(key):
+        substitutions = dict()
+        eng_index = 0
+        for row in key[0]:
+            for col in key[1]:
+                substitutions[row + col] = english_chars[eng_index].upper()
+                eng_index += 1
+                if eng_index == english_chars.index("j"):
+                    eng_index += 1
+        return substitutions
+
+    def encipher(self, give_key=False):
+        if self.auto:
+            new_text = self.duo_to_mono(self.text)
+            enciphered = MonoSub(new_text).encipher(give_key=give_key)
+            if give_key:
+                self.key = enciphered.key
+                enciphered = enciphered.text
+        else:
+            new_text = letters(self.text).lower()
+            split_text = (
+                new_text[i: i + 2] for i in range(0, len(new_text), 2)
+            )
+            enciphered = "".join(self.key[bigram] for bigram in split_text)
+        if give_key:
+            return TextKey(match(self.text, enciphered), self.key)
+        else:
+            return match(self.text, enciphered)
+
+
 if __name__ == "__main__":
     text_1A = Caesar(
         cipher_texts.Challenge2018.encrypted_text_1A,
@@ -519,12 +573,12 @@ if __name__ == "__main__":
         keyword=True
     )
     solution_3B = text_3B.encipher()
-    print("1A: ", solution_1A)
-    print("1B: ", solution_1B)
-    print("2A: ", solution_2A)
-    print("2B: ", solution_2B)
-    print("3A: ", solution_3A)
-    print("3B: ", solution_3B)
+    #print("1A: ", solution_1A)
+    #print("1B: ", solution_1B)
+    #print("2A: ", solution_2A)
+    #print("2B: ", solution_2B)
+    #print("3A: ", solution_3A)
+    #print("3B: ", solution_3B)
     """
     text_2_1A = MonoSub(cipher_texts.Challenge2017.encrypted_text_1A)
     text_2_3B = MonoSub(cipher_texts.Challenge2018.encrypted_text_3B)
@@ -534,4 +588,9 @@ if __name__ == "__main__":
     # for item in combinations(range(26), 2):
     # print(item)
     # print(MonoSub.keyword_to_key("loyalot"))
+    text_2_3B = DuoSub(
+        cipher_texts.Challenge2017.encrypted_text_3B,
+        key_square=[('x', 'l', 'c', 'd', 'm'), ('x', 'l', 'c', 'd', 'm')]
+    )
+    print(text_2_3B.encipher(give_key=True))
     print("--- %s seconds ---" % (time() - start_time))
