@@ -1,6 +1,6 @@
 from time import time as time
 from math import gcd, log10, ceil
-from collections import namedtuple, defaultdict, Counter
+from collections import namedtuple, defaultdict, Counter, OrderedDict
 from itertools import combinations, zip_longest
 from sys import getsizeof
 import cipher_texts
@@ -306,7 +306,7 @@ class Viginere:
             shifts.append(-1*split_shift % ENGLISH_LANG_LEN)
         return "".join(english_chars[shift] for shift in shifts)
 
-    def encipher(self) -> str:
+    def encipher(self, give_key=False) -> str:
         if self.auto:
             self.key = self.prob_key
         shifted_split = list()
@@ -321,7 +321,10 @@ class Viginere:
             "".join(chunk)
             for chunk in zip_longest(*shifted_split, fillvalue="")
         )
-        return match(self.text, enciphered)
+        if give_key:
+            return TextKey(match(self.text, enciphered), self.key)
+        else:
+            return match(self.text, enciphered)
 
 
 class AffineViginere:
@@ -355,14 +358,14 @@ class AffineViginere:
 
 
 class Scytale:
-    TextFit = namedtuple("TextFitness", ['text', 'fitness'])
+    TextFitLen = namedtuple("TextFitnessLength", ['text', 'fitness', 'length'])
 
     def __init__(self, text: str, key: int=1, auto: bool=True):
         self.text = text
         self.key = key
         self.auto = auto
 
-    def encipher(self) -> str:
+    def encipher(self, give_key=False) -> str:
         text = letters(self.text).lower()
         if self.auto:
             possible_texts = list()
@@ -372,19 +375,25 @@ class Scytale:
                     for i in range(len(text)//length)
                 )
                 possible_texts.append(
-                    TextFit(
+                    Scytale.TextFitLen(
                         text=possible_text,
-                        fitness=english_quadgram_fitness(possible_text)
+                        fitness=english_quadgram_fitness(possible_text),
+                        length=length
                     )
                 )
-            enciphered = sorted(
-                possible_texts, key=lambda text_fit: text_fit.fitness)[0].text
+            best = sorted(
+                possible_texts, key=lambda text_fit: text_fit.fitness)[0]
+            enciphered = best.text
+            self.key = best.length
         else:
             enciphered = "".join(
                 text[i::len(text)//self.key]
                 for i in range(len(text)//self.key)
             )
-        return enciphered
+        if give_key:
+            return TextKey(enciphered, self.key)
+        else:
+            return enciphered
 
 
 class MonoSub:
@@ -395,6 +404,7 @@ class MonoSub:
     def __init__(self, text: str, key: dict={}):
         self.text = text
         self.key = key
+        self.auto = not bool(key)
 
     @property
     def prob_key(self):
@@ -446,35 +456,38 @@ class MonoSub:
                 current_key = best_new_key
         return current_key
 
-    def encipher(self, key: dict={}):
-        if not key:
+    def encipher(self, key: dict={}, give_key=False):
+        if not key and self.auto:
             key = self.best_key
         enciphered = "".join(
             key[char] if char in key
             else char for char in self.text.lower()
         )
-        return match(self.text, enciphered)
+        if give_key:
+            return TextKey(match(self.text, enciphered), key)
+        else:
+            return match(self.text, enciphered)
 
 
 if __name__ == "__main__":
     text_1A = Caesar(cipher_texts.Challenge2018.encrypted_text_1A)
-    solution_1A = text_1A.encipher()
+    solution_1A = text_1A.encipher(give_key=True)
     text_1B = Caesar(cipher_texts.Challenge2018.encrypted_text_1B)
-    solution_1B = text_1B.encipher()
+    solution_1B = text_1B.encipher(give_key=True)
     text_2A = Caesar(cipher_texts.Challenge2018.encrypted_text_2A)
-    solution_2A = text_2A.encipher()
+    solution_2A = text_2A.encipher(give_key=True)
     text_2B = Affine(cipher_texts.Challenge2018.encrypted_text_2B)
-    solution_2B = text_2B.encipher()
-    text_3A = AffineViginere(cipher_texts.Challenge2018.encrypted_text_3A)
-    solution_3A = text_3A.encipher()
+    solution_2B = text_2B.encipher(give_key=True)
+    text_3A = Affine(cipher_texts.Challenge2018.encrypted_text_3A)
+    solution_3A = text_3A.encipher(give_key=True)
     text_3B = MonoSub(cipher_texts.Challenge2018.encrypted_text_3B)
-    solution_3B = text_3B.encipher()
-    print("1A: ", solution_1A)
-    print("1B: ", solution_1B)
-    print("2A: ", solution_2A)
-    print("2B: ", solution_2B)
-    print("3A: ", solution_3A)
-    print("3B: ", solution_3B)
+    solution_3B = text_3B.encipher(give_key=True)
+    print("1A: ", solution_1A.key)
+    print("1B: ", solution_1B.key)
+    print("2A: ", solution_2A.key)
+    print("2B: ", solution_2B.key)
+    print("3A: ", solution_3A.key)
+    print("3B: ", solution_3B.key)
     """
     text_2_1A = MonoSub(cipher_texts.Challenge2017.encrypted_text_1A)
     text_2_3B = MonoSub(cipher_texts.Challenge2018.encrypted_text_3B)
