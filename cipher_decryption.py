@@ -401,10 +401,26 @@ class MonoSub:
     KeyFit = namedtuple('KeyFitness', ['key', 'fitness'])
     CharSwap = namedtuple('CharSwap', ['char', 'swap_char'])
 
-    def __init__(self, text: str, key: dict={}):
+    def __init__(self, text: str, key=None, keyword=False):
         self.text = text
         self.key = key
         self.auto = not bool(key)
+        if keyword:
+            self.key = self.keyword_to_key(key)
+
+    @staticmethod
+    def keyword_to_key(key):
+        new_key = "".join(OrderedDict.fromkeys(key))
+        start = max(english_chars.index(char) for char in new_key)
+        characters = english_chars[start:] + english_chars[:start]
+        for char in characters:
+            if char not in new_key:
+                new_key += char
+        final_key = {
+            key_char: eng_char.upper()
+            for key_char, eng_char in zip(new_key, english_chars)
+        }
+        return final_key
 
     @property
     def prob_key(self):
@@ -459,6 +475,8 @@ class MonoSub:
     def encipher(self, key: dict={}, give_key=False):
         if not key and self.auto:
             key = self.best_key
+        elif self.key:
+            key = self.key
         enciphered = "".join(
             key[char] if char in key
             else char for char in self.text.lower()
@@ -470,24 +488,43 @@ class MonoSub:
 
 
 if __name__ == "__main__":
-    text_1A = Caesar(cipher_texts.Challenge2018.encrypted_text_1A)
-    solution_1A = text_1A.encipher(give_key=True)
-    text_1B = Caesar(cipher_texts.Challenge2018.encrypted_text_1B)
-    solution_1B = text_1B.encipher(give_key=True)
-    text_2A = Caesar(cipher_texts.Challenge2018.encrypted_text_2A)
-    solution_2A = text_2A.encipher(give_key=True)
-    text_2B = Affine(cipher_texts.Challenge2018.encrypted_text_2B)
-    solution_2B = text_2B.encipher(give_key=True)
-    text_3A = Affine(cipher_texts.Challenge2018.encrypted_text_3A)
-    solution_3A = text_3A.encipher(give_key=True)
-    text_3B = MonoSub(cipher_texts.Challenge2018.encrypted_text_3B)
-    solution_3B = text_3B.encipher(give_key=True)
-    print("1A: ", solution_1A.key)
-    print("1B: ", solution_1B.key)
-    print("2A: ", solution_2A.key)
-    print("2B: ", solution_2B.key)
-    print("3A: ", solution_3A.key)
-    print("3B: ", solution_3B.key)
+    text_1A = Caesar(
+        cipher_texts.Challenge2018.encrypted_text_1A,
+        shift=19
+    )
+    solution_1A = text_1A.encipher()
+    text_1B = Caesar(
+        cipher_texts.Challenge2018.encrypted_text_1B,
+        shift=15
+    )
+    solution_1B = text_1B.encipher()
+    text_2A = Caesar(
+        cipher_texts.Challenge2018.encrypted_text_2A,
+        shift=19
+    )
+    solution_2A = text_2A.encipher()
+    text_2B = Affine(
+        cipher_texts.Challenge2018.encrypted_text_2B,
+        switch=(11, 4)
+    )
+    solution_2B = text_2B.encipher()
+    text_3A = Affine(
+        cipher_texts.Challenge2018.encrypted_text_3A,
+        switch=(9, 25)
+    )
+    solution_3A = text_3A.encipher()
+    text_3B = MonoSub(
+        cipher_texts.Challenge2018.encrypted_text_3B,
+        key="loyalot",
+        keyword=True
+    )
+    solution_3B = text_3B.encipher()
+    print("1A: ", solution_1A)
+    print("1B: ", solution_1B)
+    print("2A: ", solution_2A)
+    print("2B: ", solution_2B)
+    print("3A: ", solution_3A)
+    print("3B: ", solution_3B)
     """
     text_2_1A = MonoSub(cipher_texts.Challenge2017.encrypted_text_1A)
     text_2_3B = MonoSub(cipher_texts.Challenge2018.encrypted_text_3B)
@@ -496,4 +533,5 @@ if __name__ == "__main__":
     # print(solution_3B)
     # for item in combinations(range(26), 2):
     # print(item)
+    # print(MonoSub.keyword_to_key("loyalot"))
     print("--- %s seconds ---" % (time() - start_time))
