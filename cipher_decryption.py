@@ -679,6 +679,10 @@ class Challenge2017:
         cipher_texts.Challenge2017.encrypted_text_7B,
         keep=["_"]
     ).encipher()
+    solution_8A = Viginere(
+        "".join(reversed(cipher_texts.Challenge2017.encrypted_text_8A)),
+        key="nijmegen"
+    ).encipher()
 
 
 if __name__ == "__main__":
@@ -728,8 +732,5 @@ if __name__ == "__main__":
     # for item in combinations(range(26), 2):
     # print(item)
     # print(MonoSub.keyword_to_key("loyalot"))
-    print(Challenge2017.solution_7B)
-    #x = cipher_texts.Challenge2017.encrypted_text_7B
-    #y = Scytale(x, key=6, keep=["_"]).encipher()
-
+    print(Challenge2017.solution_8A)
     print("--- %s seconds ---" % (time() - start_time))
