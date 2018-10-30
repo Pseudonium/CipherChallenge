@@ -156,7 +156,7 @@ class Caesar:
             ) % ENGLISH_LANG_LEN
         ]
 
-    def encipher(self) -> str:
+    def encipher(self, give_key=False) -> str:
         if self.auto:
             modal_char = auto_freq_analyser(self.text)[0].character
             self.shift = (
@@ -166,7 +166,10 @@ class Caesar:
             self.char_shift(char, self.shift) if char.isalpha()
             else char for char in self.text
         )
-        return TextKey(match(self.text, enciphered), self.shift)
+        if give_key:
+            return TextKey(match(self.text, enciphered), self.shift)
+        else:
+            return match(self.text, enciphered)
 
 
 class Affine:
@@ -219,7 +222,7 @@ class Affine:
             % ENGLISH_LANG_LEN
         ]
 
-    def encipher(self) -> str:
+    def encipher(self, give_key=False) -> str:
         if self.auto:
             possible_texts = list()
             for key in self.prob_keys:
@@ -243,7 +246,10 @@ class Affine:
                 self.char_shift(char, self.key) if char.isalpha()
                 else char for char in self.text
             )
-        return TextKey(match(self.text, enciphered), self.key)
+        if give_key:
+            return TextKey(match(self.text, enciphered), self.key)
+        else:
+            return match(self.text, enciphered)
 
 
 class Viginere:
@@ -289,7 +295,7 @@ class Viginere:
             split_shifts = list()
             for possible_shift in range(26):
                 shifted_text = Caesar(
-                    split, shift=possible_shift, forced=True).encipher().text
+                    split, shift=possible_shift, forced=True).encipher()
                 split_shifts.append(
                     Viginere.ChiShift(
                         english_1gram_chi(shifted_text),
@@ -309,7 +315,7 @@ class Viginere:
                 split,
                 shift=ENGLISH_LANG_LEN-english_chars.index(self.key[index]),
                 # Above: Complement of key for decryption
-            ).encipher().text
+            ).encipher()
             shifted_split.append(split)
         enciphered = "".join(
             "".join(chunk)
@@ -331,7 +337,7 @@ class AffineViginere:
                 (switch, 0) for switch in range(26)
                 if gcd(switch, 26) == 1
             )
-            aff_texts = (Affine(self.text, switch=possible_switch).encipher().text
+            aff_texts = (Affine(self.text, switch=possible_switch).encipher()
                          for possible_switch in possible_switches)
             vig_texts = (Viginere(aff_text).encipher()
                          for aff_text in aff_texts)
@@ -343,7 +349,7 @@ class AffineViginere:
             enciphered = sorted(
                 possible_texts, key=lambda text_chi: text_chi.chi)[0].text
         else:
-            aff_text = Affine(self.text, switch=self.switch).encipher().text
+            aff_text = Affine(self.text, switch=self.switch).encipher()
             enciphered = Viginere(aff_text, key=self.key).encipher()
         return match(self.text, enciphered)
 
@@ -463,10 +469,10 @@ if __name__ == "__main__":
     solution_3A = text_3A.encipher()
     text_3B = MonoSub(cipher_texts.Challenge2018.encrypted_text_3B)
     solution_3B = text_3B.encipher()
-    print("1A: ", solution_1A.text)
-    print("1B: ", solution_1B.text)
-    print("2A: ", solution_2A.text)
-    print("2B: ", solution_2B.text)
+    print("1A: ", solution_1A)
+    print("1B: ", solution_1B)
+    print("2A: ", solution_2A)
+    print("2B: ", solution_2B)
     print("3A: ", solution_3A)
     print("3B: ", solution_3B)
     """
