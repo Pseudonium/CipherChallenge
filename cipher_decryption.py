@@ -1,7 +1,7 @@
 from time import time as time
 from math import gcd, log10, ceil
 from collections import namedtuple, defaultdict, Counter, OrderedDict
-from itertools import combinations, zip_longest
+from itertools import combinations, zip_longest, permutations
 from sys import getsizeof
 import cipher_texts
 import pdb
@@ -48,6 +48,15 @@ def word_reverse(text: str) -> str:
         "".join(reversed(word))
         for word in text.split(" ")
     )
+
+
+def pad_to_length(string: str, length: int, fillvalue=" "):
+    new_string = string
+    if len(new_string) >= length:
+        return new_string
+    else:
+        new_string += fillvalue
+        return pad_to_length(new_string, length, fillvalue=fillvalue)
 
 # -----------------------
 # -----------------------
@@ -675,6 +684,26 @@ class AutoKey:
         return match(self.text, final_plain)
 
 
+class ColTrans:
+    def __init__(self, text, key: list=[]):
+        self.text = text
+        self.key = key
+        self.auto = not bool(key)
+
+    @staticmethod
+    def permute(block: str, key: list):
+        if len(block) > len(key):
+            return block
+        elif len(block) < len(key):
+            block = pad_to_length(block, len(key))
+        else:
+            pass
+        return "".join(
+            block[perm_index]
+            for perm_index in key
+        )
+
+
 class Challenge2016:
     solution_1A = Caesar(
         cipher_texts.Challenge2016.encrypted_text_1A,
@@ -856,5 +885,5 @@ if __name__ == "__main__":
     # print(Challenge2018.solution_3B)
     x = cipher_texts.Challenge2016.encrypted_text_4B
     y = Scytale("".join(reversed(x)))
-    print(x)
+    # print(x)
     print("--- %s seconds ---" % (time() - start_time))
