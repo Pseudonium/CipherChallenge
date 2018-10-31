@@ -23,8 +23,10 @@ def match(original: str, formatted: str) -> str:
     return "".join(formatted)
 
 
-def letters(string: str) -> str:
-    return "".join(character for character in string if character.isalpha())
+def letters(string: str, keep=[]) -> str:
+    return "".join(
+        character for character in string
+        if character.isalpha() or character in keep)
 
 
 def mod_inverse(num: int, mod: int) -> int:
@@ -264,7 +266,7 @@ class Viginere:
     @property
     def prob_key_length(self) -> int:
         text = letters(self.text).lower()
-        for possible_length in range(1, 1000):
+        for possible_length in range(1, 20):
             split_text = list(
                 "".join(text[offset::possible_length])
                 for offset in range(possible_length)
@@ -309,8 +311,15 @@ class Viginere:
     def encipher(self, give_key=False) -> str:
         if self.auto:
             self.key = self.prob_key
+            split_text = self.split_text
+        else:
+            text = letters(self.text).lower()
+            split_text = (
+                "".join(text[offset::len(self.key)])
+                for offset in range(len(self.key))
+            )
         shifted_split = list()
-        for index, split in enumerate(self.split_text):
+        for index, split in enumerate(split_text):
             split = Caesar(
                 split,
                 shift=ENGLISH_LANG_LEN-english_chars.index(self.key[index]),
@@ -360,19 +369,32 @@ class AffineViginere:
 class Scytale:
     TextFitLen = namedtuple("TextFitnessLength", ['text', 'fitness', 'length'])
 
-    def __init__(self, text: str, key: int=1, auto: bool=True):
+    def __init__(self, text: str, key: int=1, auto: bool=True, keep=[]):
         self.text = text
         self.key = key
-        self.auto = auto
+        self.auto = not bool(key > 1)
+        self.keep = keep
 
     def encipher(self, give_key=False) -> str:
-        text = letters(self.text).lower()
+        text = letters(self.text, keep=self.keep).lower()
         if self.auto:
             possible_texts = list()
             for length in range(1, 10):
+                """
+                if self.ceil:
+                    possible_text = "".join(
+                        text[i::ceil(len(text)/length)]
+                        for i in range(ceil(len(text)/length))
+                    )
+                else:
+                    possible_text = "".join(
+                        text[i::len(text)//length]
+                        for i in range(len(text)//length)
+                    )
+                """
                 possible_text = "".join(
-                    text[i::len(text)//length]
-                    for i in range(len(text)//length)
+                    text[i::round(len(text)/length)]
+                    for i in range(round(len(text)/length))
                 )
                 possible_texts.append(
                     Scytale.TextFitLen(
@@ -386,14 +408,53 @@ class Scytale:
             enciphered = best.text
             self.key = best.length
         else:
+            """
+            if self.ceil:
+                enciphered = "".join(
+                    text[i::ceil(len(text)/self.key)]
+                    for i in range(ceil(len(text)/self.key))
+                )
+            else:
+                enciphered = "".join(
+                    text[i::len(text)//self.key]
+                    for i in range(len(text)//self.key)
+                )
+            """
             enciphered = "".join(
-                text[i::len(text)//self.key]
-                for i in range(len(text)//self.key)
+                text[i::round(len(text)/self.key)]
+                for i in range(round(len(text)/self.key))
             )
         if give_key:
             return TextKey(enciphered, self.key)
         else:
             return enciphered
+
+
+class ScytaleViginere:
+    def __init__(self, text: str, length: int=1, key: str="", keep=[]):
+        self.text = text
+        self.length = length
+        self.key = key
+        self.auto = not bool(key)
+        self.keep = keep
+
+    def encipher(self):
+        text = letters(self.text, keep=self.keep).lower()
+        if self.auto:
+            for length in range(2, 10):
+                possible_text = Scytale(
+                    text, key=length, keep=self.keep).encipher()
+                if Viginere(possible_text).prob_key_length != 1:
+                    break
+            enciphered = Viginere(possible_text).encipher()
+        else:
+            enciphered = Scytale(
+                text,
+                key=self.length,
+                keep=self.keep
+            ).encipher()
+            enciphered = Viginere(enciphered, key=self.key).encipher()
+        return match(self.text, enciphered)
 
 
 class MonoSub:
@@ -410,7 +471,7 @@ class MonoSub:
 
     @staticmethod
     def keyword_to_key(key):
-        new_key = "".join(OrderedDict.fromkeys(key))
+        new_key = "".join(OrderedDict.fromkeys(letters(key).lower()))
         start = max(english_chars.index(char) for char in new_key)
         characters = english_chars[start:] + english_chars[:start]
         for char in characters:
@@ -487,6 +548,143 @@ class MonoSub:
             return match(self.text, enciphered)
 
 
+class DuoSub:
+    def __init__(self, text, key_square: list=[]):
+        self.text = text
+        if key_square:
+            self.key = self.create_substitution_dict(key_square)
+        self.auto = not bool(key_square)
+
+    @staticmethod
+    def duo_to_mono(text):
+        new_text = letters(text).lower()
+        split_text = list(
+            new_text[i:i + 2] for i in range(0, len(new_text), 2)
+        )
+        substitutions = {}
+        eng_index = 0
+        for bigram in split_text:
+            if bigram not in substitutions:
+                substitutions[bigram] = english_chars[eng_index]
+                eng_index += 1
+            if eng_index == 24:
+                break
+        return "".join(substitutions[bigram] for bigram in split_text)
+
+    @staticmethod
+    def create_substitution_dict(key):
+        substitutions = dict()
+        eng_index = 0
+        for row in key[0]:
+            for col in key[1]:
+                substitutions[row + col] = english_chars[eng_index].upper()
+                eng_index += 1
+                if eng_index == english_chars.index("j"):
+                    eng_index += 1
+        return substitutions
+
+    def encipher(self, give_key=False):
+        if self.auto:
+            new_text = self.duo_to_mono(self.text)
+            enciphered = MonoSub(new_text).encipher(give_key=give_key)
+            if give_key:
+                self.key = enciphered.key
+                enciphered = enciphered.text
+        else:
+            new_text = letters(self.text).lower()
+            split_text = (
+                new_text[i: i + 2] for i in range(0, len(new_text), 2)
+            )
+            enciphered = "".join(self.key[bigram] for bigram in split_text)
+        if give_key:
+            return TextKey(match(self.text, enciphered), self.key)
+        else:
+            return match(self.text, enciphered)
+
+
+class Challenge2017:
+    solution_1A = Caesar(
+        cipher_texts.Challenge2017.encrypted_text_1A,
+        shift=5
+    ).encipher()
+    solution_1B = Caesar(
+        cipher_texts.Challenge2017.encrypted_text_1B,
+        shift=17
+    ).encipher()
+    solution_2A = MonoSub(
+        cipher_texts.Challenge2017.encrypted_text_2A,
+        key="cairo",
+        keyword=True
+    ).encipher()
+    solution_2B = Scytale(
+        cipher_texts.Challenge2017.encrypted_text_2B,
+        key=6
+    ).encipher()
+    solution_3A = Affine(
+        cipher_texts.Challenge2017.encrypted_text_3A,
+        switch=(15, 22)
+    ).encipher()
+    solution_3B = DuoSub(
+        cipher_texts.Challenge2017.encrypted_text_3B,
+        key_square=[('x', 'l', 'c', 'd', 'm'), ('x', 'l', 'c', 'd', 'm')]
+    ).encipher()
+    solution_4A = MonoSub(
+        cipher_texts.Challenge2017.encrypted_text_4A,
+        key="gaza frequens Libycum: duxit Karthago triumphum!",
+        keyword=True
+    ).encipher()
+    solution_4B = Viginere(
+        cipher_texts.Challenge2017.encrypted_text_4B,
+        key="arcanaimperii"
+    ).encipher()
+    solution_5A = MonoSub(
+        cipher_texts.Challenge2017.encrypted_text_5A,
+        key="decoy",
+        keyword=True
+    ).encipher()
+    solution_5B = Affine(
+        cipher_texts.Challenge2017.encrypted_text_5B,
+        switch=(25, 0)
+    ).encipher()
+    solution_5B = Viginere(
+        solution_5B,
+        key=Affine("arcanaimperii", switch=(25, 0)).encipher()
+    ).encipher()
+    solution_6A = Viginere(
+        cipher_texts.Challenge2017.encrypted_text_6A,
+        key="zeus"
+    ).encipher()
+    solution_6B = Viginere(
+        cipher_texts.Challenge2017.encrypted_text_6B,
+        key="agricolaemortem"
+    ).encipher()
+    solution_6B = Affine(
+        solution_6B,
+        switch=(15, 0)
+    ).encipher()
+    solution_7A = Viginere(
+        cipher_texts.Challenge2017.encrypted_text_7A,
+        key="hanginggardens"
+    ).encipher()
+    solution_7B = Scytale(
+        cipher_texts.Challenge2017.encrypted_text_7B,
+        key=6,
+        keep=["_"]
+    ).encipher()
+    solution_7B = Viginere(
+        solution_7B,
+        key="scytale"
+    ).encipher()
+    solution_7B = ScytaleViginere(
+        cipher_texts.Challenge2017.encrypted_text_7B,
+        keep=["_"]
+    ).encipher()
+    solution_8A = Viginere(
+        "".join(reversed(cipher_texts.Challenge2017.encrypted_text_8A)),
+        key="nijmegen"
+    ).encipher()
+
+
 if __name__ == "__main__":
     text_1A = Caesar(
         cipher_texts.Challenge2018.encrypted_text_1A,
@@ -519,12 +717,12 @@ if __name__ == "__main__":
         keyword=True
     )
     solution_3B = text_3B.encipher()
-    print("1A: ", solution_1A)
-    print("1B: ", solution_1B)
-    print("2A: ", solution_2A)
-    print("2B: ", solution_2B)
-    print("3A: ", solution_3A)
-    print("3B: ", solution_3B)
+    #print("1A: ", solution_1A)
+    #print("1B: ", solution_1B)
+    #print("2A: ", solution_2A)
+    #print("2B: ", solution_2B)
+    #print("3A: ", solution_3A)
+    #print("3B: ", solution_3B)
     """
     text_2_1A = MonoSub(cipher_texts.Challenge2017.encrypted_text_1A)
     text_2_3B = MonoSub(cipher_texts.Challenge2018.encrypted_text_3B)
@@ -534,4 +732,5 @@ if __name__ == "__main__":
     # for item in combinations(range(26), 2):
     # print(item)
     # print(MonoSub.keyword_to_key("loyalot"))
+    print(Challenge2017.solution_8A)
     print("--- %s seconds ---" % (time() - start_time))
