@@ -182,6 +182,7 @@ class Caesar:
 
     @staticmethod
     def char_shift(char: str, shift: int) -> str:
+        """Shift a character by shift."""
         return english_chars[
             (
                 shift + english_chars.index(char.lower())
@@ -189,6 +190,7 @@ class Caesar:
         ]
 
     def encipher(self, give_key=False) -> str:
+        """Encipher the text."""
         if self.auto:
             modal_char = auto_freq_analyser(self.text)[0].character
             self.shift = (
@@ -208,6 +210,7 @@ class Affine:
 
     Key = namedtuple('AffineKey', ['a', 'b'])
     TextChiKey = namedtuple('TextChiKey', ['text', 'chi', 'key'])
+    MAX_SEARCH = 5
 
     def __init__(self, text: str, switch: tuple=(1, 0)):
         self.text = text
@@ -216,14 +219,18 @@ class Affine:
 
     @property
     def modal_pairs(self):
+        """Find the possible pairs of 'e' and 't' in the text."""
         freq_chars = (
-            freq.character for freq in auto_freq_analyser(self.text)[0:5]
+            freq.character for freq in auto_freq_analyser(
+                self.text
+            )[0:Affine.MAX_SEARCH]
         )
         return combinations(freq_chars, 2)
 
     @property
     def prob_keys(self) -> list:
         """
+        Finds the possible affine keys according to this formula:
         a*c1 + b = p1
         a*c2 + b = p2
         a*(c1 - c2) = p1 - p2
@@ -249,12 +256,14 @@ class Affine:
 
     @staticmethod
     def char_shift(char: str, key) -> str:
+        """Shift a char using the affine key."""
         return english_chars[
             (english_chars.index(char.lower())*key.a + key.b)
             % ENGLISH_LANG_LEN
         ]
 
     def encipher(self, give_key=False) -> str:
+        """Encrypt the given text."""
         if self.auto:
             possible_texts = list()
             for key in self.prob_keys:
@@ -287,6 +296,7 @@ class Affine:
 class Viginere:
 
     ChiShift = namedtuple("ChiShift", ['chi', 'shift'])
+    MAX_SEARCH = 20
 
     def __init__(self, text: str, key: str=""):
         self.text = text
@@ -296,7 +306,7 @@ class Viginere:
     @property
     def prob_key_length(self) -> int:
         text = letters(self.text).lower()
-        for possible_length in range(1, 20):
+        for possible_length in range(1, Viginere.MAX_SEARCH):
             split_text = list(
                 "".join(text[offset::possible_length])
                 for offset in range(possible_length)
@@ -304,9 +314,6 @@ class Viginere:
             average_codex = sum(
                 codex(split) for split in split_text
             ) / len(split_text)
-            # average_codex = sum(
-            #    codex(split) for split in split_text
-            # ) / len(split_text)
             if average_codex > ENGLISH_LOWER_CODEX:
                 return possible_length
         else:
@@ -325,7 +332,7 @@ class Viginere:
         shifts = list()
         for split in self.split_text:
             split_shifts = list()
-            for possible_shift in range(26):
+            for possible_shift in range(ENGLISH_LANG_LEN):
                 shifted_text = Caesar(
                     split, shift=possible_shift, forced=True).encipher()
                 split_shifts.append(
@@ -376,8 +383,8 @@ class AffineViginere:
     def encipher(self) -> str:
         if self.auto:
             possible_switches = (
-                (switch, 0) for switch in range(26)
-                if gcd(switch, 26) == 1
+                (switch, 0) for switch in range(ENGLISH_LANG_LEN)
+                if gcd(switch, ENGLISH_LANG_LEN) == 1
             )
             aff_texts = (Affine(self.text, switch=possible_switch).encipher()
                          for possible_switch in possible_switches)
@@ -398,6 +405,7 @@ class AffineViginere:
 
 class Scytale:
     TextFitLen = namedtuple("TextFitnessLength", ['text', 'fitness', 'length'])
+    MAX_SEARCH = 10
 
     def __init__(self, text: str, key: int=1, auto: bool=True, keep=[]):
         self.text = text
@@ -409,22 +417,11 @@ class Scytale:
         text = letters(self.text, keep=self.keep).lower()
         if self.auto:
             possible_texts = list()
-            for length in range(1, 10):
-                """
-                if self.ceil:
-                    possible_text = "".join(
-                        text[i::ceil(len(text)/length)]
-                        for i in range(ceil(len(text)/length))
-                    )
-                else:
-                    possible_text = "".join(
-                        text[i::len(text)//length]
-                        for i in range(len(text)//length)
-                    )
-                """
+            for length in range(1, Scytale.MAX_SEARCH):
+                skip = round(len(text) / length)
                 possible_text = "".join(
-                    text[i::round(len(text)/length)]
-                    for i in range(round(len(text)/length))
+                    text[i::skip]
+                    for i in range(skip)
                 )
                 possible_texts.append(
                     Scytale.TextFitLen(
@@ -441,21 +438,10 @@ class Scytale:
             enciphered = best.text
             self.key = best.length
         else:
-            """
-            if self.ceil:
-                enciphered = "".join(
-                    text[i::ceil(len(text)/self.key)]
-                    for i in range(ceil(len(text)/self.key))
-                )
-            else:
-                enciphered = "".join(
-                    text[i::len(text)//self.key]
-                    for i in range(len(text)//self.key)
-                )
-            """
+            skip = round(len(text) / self.key)
             enciphered = "".join(
-                text[i::round(len(text)/self.key)]
-                for i in range(round(len(text)/self.key))
+                text[i::skip]
+                for i in range(skip)
             )
         if give_key:
             return TextKey(enciphered, self.key)
@@ -494,6 +480,7 @@ class MonoSub:
 
     KeyFit = namedtuple('KeyFitness', ['key', 'fitness'])
     CharSwap = namedtuple('CharSwap', ['char', 'swap_char'])
+    MAX_SEARCH = 1000
 
     def __init__(self, text: str, key=None, keyword=False):
         self.text = text
@@ -503,7 +490,8 @@ class MonoSub:
             self.key = self.keyword_to_key(key)
 
     @staticmethod
-    def keyword_to_key(key):
+    def keyword_to_key(key: str) -> dict:
+        """Converts a keyword into a substituiton dict."""
         new_key = "".join(OrderedDict.fromkeys(letters(key).lower()))
         start = max(english_chars.index(char) for char in new_key)
         characters = english_chars[start:] + english_chars[:start]
@@ -517,7 +505,7 @@ class MonoSub:
         return final_key
 
     @property
-    def prob_key(self):
+    def prob_key(self) -> dict:
         analysed = auto_freq_analyser(self.text)
         for char in english_1gram_expected_dict:
             if all(char not in char_freq.character for char_freq in analysed):
@@ -532,7 +520,8 @@ class MonoSub:
         return current_key
 
     @staticmethod
-    def new_key(key, swap):
+    def new_key(key: dict, swap: tuple) -> dict:
+        """Swaps two substitutions in a key."""
         new_key = list(MonoSub.CharSwap(*item) for item in key.items())
         pair = [new_key[swap[0]], new_key[swap[1]]]
         a = pair[0].swap_char
@@ -545,13 +534,13 @@ class MonoSub:
         return new_key
 
     @property
-    def best_key(self):
+    def best_key(self) -> dict:
         current_key = self.prob_key
-        for count in range(1000):
+        for count in range(MonoSub.MAX_SEARCH):
             parent_text = self.encipher(key=current_key)
             parent_fit = english_quadgram_fitness(parent_text)
             possible_keys = [MonoSub.KeyFit(current_key, parent_fit)]
-            for swap in combinations(range(26), 2):
+            for swap in combinations(range(ENGLISH_LANG_LEN), 2):
                 new_key = self.new_key(current_key, swap)
                 child_text = self.encipher(key=new_key)
                 child_fit = english_quadgram_fitness(child_text)
@@ -567,7 +556,7 @@ class MonoSub:
                 current_key = best_new_key
         return current_key
 
-    def encipher(self, key: dict={}, give_key=False):
+    def encipher(self, key: dict={}, give_key=False) -> str:
         if not key and self.auto:
             key = self.best_key
         elif self.key:
@@ -767,5 +756,5 @@ if __name__ == "__main__":
     # print(item)
     # print(MonoSub.keyword_to_key("loyalot"))
     # print(Challenge2017.solution_8A)
-    print(Challenge2017.solution_8A)
+    print(Challenge2017.solution_2B)
     print("--- %s seconds ---" % (time() - start_time))
