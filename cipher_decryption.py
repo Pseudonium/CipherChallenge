@@ -15,7 +15,7 @@ start_time = time()
 
 
 def match(original: str, formatted: str) -> str:
-    formatted = list(formatted)
+    formatted = list(letters(formatted).lower())
     original = list(original)
     for index, value in enumerate(formatted):
         if not original[index].isalpha() and formatted[index].isalpha():
@@ -81,8 +81,9 @@ CharFreq = namedtuple(
 TextFit = namedtuple(
     "TextFitness", ['text', 'fitness']
 )
-
-TextKey = namedtuple("TextKey", ['text', 'key'])
+TextKey = namedtuple(
+    "TextKey", ['text', 'key']
+)
 
 
 def auto_freq_analyser(text: str, keep: list=[]) -> list:
@@ -296,7 +297,7 @@ class Viginere:
     @property
     def prob_key_length(self) -> int:
         text = letters(self.text).lower()
-        for possible_length in range(1, Viginere.MAX_SEARCH):
+        for possible_length in range(2, Viginere.MAX_SEARCH):
             split_text = list(
                 "".join(text[offset::possible_length])
                 for offset in range(possible_length)
@@ -679,6 +680,36 @@ class Challenge2016:
         cipher_texts.Challenge2016.encrypted_text_1A,
         shift=18
     ).encipher()
+    solution_1B = match(
+        cipher_texts.Challenge2016.encrypted_text_1B,
+        Caesar(
+            "".join(reversed(cipher_texts.Challenge2016.encrypted_text_1B)),
+            shift=15
+        ).encipher()
+    )
+    solution_2A = Caesar(
+        cipher_texts.Challenge2016.encrypted_text_2A,
+        shift=20
+    ).encipher()
+    solution_2B = Affine(
+        cipher_texts.Challenge2016.encrypted_text_2B,
+        switch=(21, 3)
+    ).encipher()
+    solution_3A = MonoSub(
+        cipher_texts.Challenge2016.encrypted_text_3A,
+        key="weston",
+        keyword=True
+    ).encipher()
+    solution_3B = MonoSub(
+        cipher_texts.Challenge2016.encrypted_text_3B,
+        key="neural",
+        keyword=True
+    ).encipher()
+    solution_4A = MonoSub(
+        cipher_texts.Challenge2016.encrypted_text_4A,
+        key="waveform",
+        keyword=True
+    ).encipher()
 
 
 class Challenge2017:
@@ -823,6 +854,7 @@ if __name__ == "__main__":
     # print(Challenge2018.solution_2B)
     # print(Challenge2018.solution_3A)
     # print(Challenge2018.solution_3B)
-    x = Affine(cipher_texts.Challenge2016.encrypted_text_1A)
-    print(Challenge2016.solution_1A)
+    x = cipher_texts.Challenge2016.encrypted_text_4B
+    y = Scytale("".join(reversed(x)))
+    print(x)
     print("--- %s seconds ---" % (time() - start_time))
