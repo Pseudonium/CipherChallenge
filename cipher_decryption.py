@@ -131,6 +131,7 @@ def english_1gram_chi(text: str) -> float:
 
 
 def codex(text: str) -> float:
+    """Return the index of coincidence of a text."""
     text = letters(text).lower()
     length = len(text)
     return sum(
@@ -145,6 +146,7 @@ english_4gram_expected_dict = dict()
 
 
 def english_quadgram_fitness(text: str) -> float:
+    """Return the fitness of a text, based on quadgram count."""
     if not english_4gram_expected_dict:
         with open("english_quadgrams.txt") as f:
             total = 0
@@ -162,7 +164,7 @@ def english_quadgram_fitness(text: str) -> float:
             fitness += english_4gram_expected_dict[quadgram]
         else:
             fitness -= 10
-    return -1*fitness
+    return fitness
 
 # -----------------------
 # -----------------------
@@ -432,7 +434,10 @@ class Scytale:
                     )
                 )
             best = sorted(
-                possible_texts, key=lambda text_fit: text_fit.fitness)[0]
+                possible_texts,
+                key=lambda text_fit: text_fit.fitness,
+                reverse=True
+            )[0]
             enciphered = best.text
             self.key = best.length
         else:
@@ -553,7 +558,8 @@ class MonoSub:
                 possible_keys.append(MonoSub.KeyFit(new_key, child_fit))
             best_new_key = sorted(
                 possible_keys,
-                key=lambda x: x.fitness
+                key=lambda x: x.fitness,
+                reverse=True
             )[0].key
             if current_key == best_new_key:
                 return current_key
@@ -761,4 +767,5 @@ if __name__ == "__main__":
     # print(item)
     # print(MonoSub.keyword_to_key("loyalot"))
     # print(Challenge2017.solution_8A)
+    print(Challenge2017.solution_8A)
     print("--- %s seconds ---" % (time() - start_time))
