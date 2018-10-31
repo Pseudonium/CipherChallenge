@@ -1,7 +1,7 @@
 from time import time as time
 from math import gcd, log10, ceil
 from collections import namedtuple, defaultdict, Counter, OrderedDict
-from itertools import combinations, zip_longest
+from itertools import combinations, zip_longest, permutations
 from sys import getsizeof
 import cipher_texts
 import pdb
@@ -48,6 +48,15 @@ def word_reverse(text: str) -> str:
         "".join(reversed(word))
         for word in text.split(" ")
     )
+
+
+def pad_to_length(string: str, length: int, fillvalue=" "):
+    new_string = string
+    if len(new_string) >= length:
+        return new_string
+    else:
+        new_string += fillvalue
+        return pad_to_length(new_string, length, fillvalue=fillvalue)
 
 # -----------------------
 # -----------------------
@@ -675,6 +684,76 @@ class AutoKey:
         return match(self.text, final_plain)
 
 
+class ColTrans:
+
+    MAX_SEARCH = 7
+
+    TextFitPerm = namedtuple(
+        'TextFitnessPermutation',
+        ['text', 'fitness', 'perm']
+    )
+
+    def __init__(self, text, key: list=[]):
+        self.text = text
+        self.key = key
+        self.auto = not bool(key)
+
+    @staticmethod
+    def permute(block: str, key: list):
+        if len(block) > len(key):
+            return block
+        elif len(block) < len(key):
+            block = pad_to_length(block, len(key))
+        else:
+            pass
+        return "".join(
+            block[perm_index]
+            for perm_index in key
+        )
+
+    def encipher(self, key: list=[], give_key=False):
+        text = letters(self.text).lower()
+        if self.auto:
+            possible_texts = list()
+            for key_length in range(2, ColTrans.MAX_SEARCH):
+                split_text = list(
+                    text[i: i + key_length]
+                    for i in range(0, len(text), key_length)
+                )
+                for perm in permutations(range(key_length)):
+                    enciphered = "".join(
+                        self.permute(split, perm)
+                        for split in split_text
+                    )
+                    possible_texts.append(
+                        ColTrans.TextFitPerm(
+                            text=enciphered,
+                            fitness=english_quadgram_fitness(enciphered),
+                            perm=perm
+                        )
+                    )
+            best = sorted(
+                possible_texts,
+                key=lambda elem: elem.fitness,
+                reverse=True
+            )[0]
+            enciphered = best.text
+            self.key = best.perm
+        else:
+            split_text = (
+                text[i: i + len(self.key)]
+                for i in range(0, len(text), len(self.key))
+            )
+            enciphered = "".join(
+                self.permute(split, self.key)
+                for split in split_text
+            )
+        if give_key:
+            return TextKey(match(self.text, enciphered), self.key)
+        else:
+            return match(self.text, enciphered)
+
+
 class Challenge2016:
     solution_1A = Caesar(
         cipher_texts.Challenge2016.encrypted_text_1A,
@@ -709,6 +788,10 @@ class Challenge2016:
         cipher_texts.Challenge2016.encrypted_text_4A,
         key="waveform",
         keyword=True
+    ).encipher()
+    solution_4B = ColTrans(
+        "".join(reversed(cipher_texts.Challenge2016.encrypted_text_4B)),
+        key=(2, 3, 1, 0, 4)
     ).encipher()
 
 
@@ -855,6 +938,6 @@ if __name__ == "__main__":
     # print(Challenge2018.solution_3A)
     # print(Challenge2018.solution_3B)
     x = cipher_texts.Challenge2016.encrypted_text_4B
-    y = Scytale("".join(reversed(x)))
-    print(x)
+    y = ColTrans("".join(reversed(x)))
+    print(Challenge2016.solution_4B)
     print("--- %s seconds ---" % (time() - start_time))
