@@ -14,34 +14,13 @@ start_time = time()
 
 
 def match(original: str, formatted: str) -> str:
-    """Match the format of the original string to the final.
-
-    >>> match('abcd', 'AbDC')
-    >>> 'abdc'
-
-    >>> match('This sentence is true.', 'thissentenceistrue')
-    >>> This sentence is true.
-    """
-    formatted_index = 0
-    final_string = ""
-    for char in original:
-        try:
-            if char.isupper() and formatted[formatted_index].isalpha():
-                final_string += formatted[formatted_index].upper()
-                formatted_index += 1
-            elif char.islower() and formatted[formatted_index].isalpha():
-                final_string += formatted[formatted_index].lower()
-                formatted_index += 1
-            elif not char.isalpha():
-                final_string += char
-            else:
-                final_string += formatted[formatted_index]
-                formatted_index += 1
-        except IndexError:
-            final_string += original[-1]
-            # Added due to the last letter not returning, unknown cause.
-            break
-    return final_string
+    formatted = list(formatted)
+    for index, value in enumerate(formatted):
+        if not original[index].isalpha() and formatted[index].isalpha():
+            formatted.insert(index, original[index])
+        elif original[index].isupper() and formatted[index].isalpha():
+            formatted[index] = formatted[index].upper()
+    return "".join(formatted)
 
 
 def letters(string: str, keep: list=[]) -> str:
@@ -370,7 +349,7 @@ class Viginere:
         if give_key:
             return TextKey(match(self.text, enciphered), self.key)
         else:
-            return enciphered
+            return match(self.text, enciphered)
 
 
 class AffineViginere:
