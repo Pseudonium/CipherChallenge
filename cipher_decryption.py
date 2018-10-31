@@ -887,6 +887,14 @@ class Challenge2016:
         cipher_texts.Challenge2016.encrypted_text_6A,
         key="nsa"
     ).encipher()
+    solution_6B = Viginere(
+        cipher_texts.Challenge2016.encrypted_text_6B,
+        key="trainer"
+    ).encipher()
+    solution_7A = Viginere(
+        "".join(reversed(cipher_texts.Challenge2016.encrypted_text_7A)),
+        key="usehill"
+    ).encipher()
 
 
 class Challenge2017:
@@ -1031,10 +1039,7 @@ if __name__ == "__main__":
     # print(Challenge2018.solution_2B)
     # print(Challenge2018.solution_3A)
     # print(Challenge2018.solution_3B)
-    x = cipher_texts.Challenge2016.encrypted_text_6A
-    y = Viginere(
-        x,
-        key="nsa"
-    )
-    print(Challenge2016.solution_6A)
+    x = cipher_texts.Challenge2016.encrypted_text_7B
+    y = AffineViginere(x)
+    print(y.encipher())
     print("--- %s seconds ---" % (time() - start_time))
