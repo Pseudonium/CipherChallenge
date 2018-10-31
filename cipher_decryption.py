@@ -14,22 +14,45 @@ start_time = time()
 
 
 def match(original: str, formatted: str) -> str:
-    formatted = list(formatted)
-    for index, value in enumerate(formatted):
-        if not original[index].isalpha() and formatted[index].isalpha():
-            formatted.insert(index, original[index])
-        elif original[index].isupper() and formatted[index].isalpha():
-            formatted[index] = formatted[index].upper()
-    return "".join(formatted)
+    """Match the format of the original string to the final.
+
+    >>> match('abcd', 'AbDC')
+    >>> 'abdc'
+
+    >>> match('This sentence is KKKKtueKKKKKKKK', 'thissentenceistrue')
+    >>> This sentence is true.
+    """
+    formatted_index = 0
+    final_string = ""
+    for char in original:
+        try:
+            if char.isupper() and formatted[formatted_index].isalpha():
+                final_string += formatted[formatted_index].upper()
+                formatted_index += 1
+            elif char.islower() and formatted[formatted_index].isalpha():
+                final_string += formatted[formatted_index].lower()
+                formatted_index += 1
+            elif not char.isalpha():
+                final_string += char
+            else:
+                final_string += formatted[formatted_index]
+                formatted_index += 1
+        except IndexError:
+            final_string += original[-1]
+            # Added due to the last letter not returning, unknown cause.
+            break
+    return final_string
 
 
-def letters(string: str, keep=[]) -> str:
+def letters(string: str, keep: list=[]) -> str:
+    """Return only alphabetic letters or those in keep."""
     return "".join(
         character for character in string
         if character.isalpha() or character in keep)
 
 
 def mod_inverse(num: int, mod: int) -> int:
+    """Return the modular inverse of num modulo mod, if it exists."""
     num = num % mod
     for possible_inverse in range(mod):
         if num * possible_inverse % mod == 1:
@@ -72,9 +95,10 @@ TextFit = namedtuple(
 TextKey = namedtuple("TextKey", ['text', 'key'])
 
 
-def auto_freq_analyser(text: str) -> list:
+def auto_freq_analyser(text: str, keep: list=[]) -> list:
+    """Analyse the frequency of characters in a text."""
     local_alphabet_freq = defaultdict(int)
-    text = letters(text).lower()
+    text = letters(text, keep=keep).lower()
     for character in text:
         local_alphabet_freq[character] += 1
     freq_table = (
@@ -87,6 +111,10 @@ def auto_freq_analyser(text: str) -> list:
 
 
 def english_1gram_chi(text: str) -> float:
+    """
+        Return the chi-squared stat
+        between a text and the normal 1gram distribution for english.
+    """
     counts = {char: 0 for char in english_chars}
     text = letters(text).lower()
     for char in text:
@@ -732,5 +760,5 @@ if __name__ == "__main__":
     # for item in combinations(range(26), 2):
     # print(item)
     # print(MonoSub.keyword_to_key("loyalot"))
-    print(Challenge2017.solution_8A)
+    # print(Challenge2017.solution_8A)
     print("--- %s seconds ---" % (time() - start_time))
