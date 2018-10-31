@@ -15,12 +15,14 @@ start_time = time()
 
 def match(original: str, formatted: str) -> str:
     formatted = list(formatted)
+    original = list(original)
     for index, value in enumerate(formatted):
         if not original[index].isalpha() and formatted[index].isalpha():
             formatted.insert(index, original[index])
         elif original[index].isupper() and formatted[index].isalpha():
             formatted[index] = formatted[index].upper()
-    return "".join(formatted)
+    result = "".join(formatted)
+    return result
 
 
 def letters(string: str, keep: list=[]) -> str:
