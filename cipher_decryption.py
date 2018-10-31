@@ -648,21 +648,30 @@ class AutoKey:
             raise NotImplementedError
         else:
             text = letters(self.text).lower()
-            intial_plain = "".join(
-                self.char_shift(cipher_char, key_char)
-                for cipher_char, key_char
-                in zip(text, self.key)
-            )
-            start_index = len(intial_plain)
-            text = text[start_index:]
-            plain_index = 0
-            for char in text:
-                intial_plain += self.char_shift(
-                    char, intial_plain[plain_index]
+            if hasattr(self, "reset"):
+                split_text = list(
+                    text[i:i + self.reset]
+                    for i in range(0, len(text), self.reset)
                 )
-                plain_index += 1
-        return intial_plain
-    pass
+            else:
+                split_text = [text]
+            final_plain = ""
+            for split in split_text:
+                initial_plain = "".join(
+                    self.char_shift(cipher_char, key_char)
+                    for cipher_char, key_char
+                    in zip(split, self.key)
+                )
+                start_index = len(initial_plain)
+                split = split[start_index:]
+                plain_index = 0
+                for char in split:
+                    initial_plain += self.char_shift(
+                        char, initial_plain[plain_index]
+                    )
+                    plain_index += 1
+                final_plain += initial_plain
+        return match(self.text, final_plain)
 
 
 class Challenge2017:
@@ -746,60 +755,43 @@ class Challenge2017:
         "".join(reversed(cipher_texts.Challenge2017.encrypted_text_8A)),
         key="nijmegen"
     ).encipher()
+    solution_8B = match(
+        cipher_texts.Challenge2017.encrypted_text_8B,
+        letters(AutoKey(
+            word_reverse(cipher_texts.Challenge2017.encrypted_text_8B),
+            key="a",
+            reset=12
+        ).encipher())
+    )
 
 
-if __name__ == "__main__":
-    text_1A = Caesar(
+class Challenge2018:
+    solution_1A = Caesar(
         cipher_texts.Challenge2018.encrypted_text_1A,
         shift=19
-    )
-    solution_1A = text_1A.encipher()
-    text_1B = Caesar(
+    ).encipher()
+    solution_1B = Caesar(
         cipher_texts.Challenge2018.encrypted_text_1B,
         shift=15
-    )
-    solution_1B = text_1B.encipher()
-    text_2A = Caesar(
+    ).encipher()
+    solution_2A = Caesar(
         cipher_texts.Challenge2018.encrypted_text_2A,
         shift=19
-    )
-    solution_2A = text_2A.encipher()
-    text_2B = Affine(
+    ).encipher()
+    solution_2B = Affine(
         cipher_texts.Challenge2018.encrypted_text_2B,
         switch=(11, 4)
-    )
-    solution_2B = text_2B.encipher()
-    text_3A = Affine(
+    ).encipher()
+    solution_3A = Affine(
         cipher_texts.Challenge2018.encrypted_text_3A,
         switch=(9, 25)
-    )
-    solution_3A = text_3A.encipher()
-    text_3B = MonoSub(
+    ).encipher()
+    solution_3B = MonoSub(
         cipher_texts.Challenge2018.encrypted_text_3B,
         key="loyalot",
         keyword=True
-    )
-    solution_3B = text_3B.encipher()
-    #print("1A: ", solution_1A)
-    #print("1B: ", solution_1B)
-    #print("2A: ", solution_2A)
-    #print("2B: ", solution_2B)
-    #print("3A: ", solution_3A)
-    #print("3B: ", solution_3B)
-    """
-    text_2_1A = MonoSub(cipher_texts.Challenge2017.encrypted_text_1A)
-    text_2_3B = MonoSub(cipher_texts.Challenge2018.encrypted_text_3B)
-    print(text_2_1A.encipher())
-    """
-    # print(solution_3B)
-    # for item in combinations(range(26), 2):
-    # print(item)
-    # print(MonoSub.keyword_to_key("loyalot"))
-    # print(Challenge2017.solution_8A)
-    x = cipher_texts.Challenge2017.encrypted_text_8B
-    # print(word_reverse(x))
-    #print((english_chars.index("e") - english_chars.index("r")) % 26)
-    y = AutoKey(word_reverse(x), key="a")
-    # pdb.set_trace()
-    print(y.encipher())
+    ).encipher()
+
+
+if __name__ == "__main__":
     print("--- %s seconds ---" % (time() - start_time))
