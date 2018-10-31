@@ -451,9 +451,9 @@ class Scytale:
                 for i in range(skip)
             )
         if give_key:
-            return TextKey(enciphered, self.key)
+            return TextKey(match(self.text, enciphered), self.key)
         else:
-            return enciphered
+            return match(self.text, enciphered)
 
 
 class ScytaleViginere:
@@ -693,13 +693,13 @@ class ColTrans:
         ['text', 'fitness', 'perm']
     )
 
-    def __init__(self, text, key: list=[]):
+    def __init__(self, text, key: tuple=()):
         self.text = text
         self.key = key
         self.auto = not bool(key)
 
     @staticmethod
-    def permute(block: str, key: list):
+    def permute(block: str, key: tuple):
         if len(block) > len(key):
             return block
         elif len(block) < len(key):
@@ -711,7 +711,7 @@ class ColTrans:
             for perm_index in key
         )
 
-    def encipher(self, key: list=[], give_key=False):
+    def encipher(self, key: tuple=(), give_key=False):
         text = letters(self.text).lower()
         if self.auto:
             possible_texts = list()
@@ -748,6 +748,86 @@ class ColTrans:
                 self.permute(split, self.key)
                 for split in split_text
             )
+        if give_key:
+            return TextKey(match(self.text, enciphered), self.key)
+        else:
+            return match(self.text, enciphered)
+
+
+class ScyColTrans:
+    Key = namedtuple('Key', ['scytale', 'columnar'])
+    TextScyColFit = namedtuple(
+        'TextScytaleColumnar',
+        ['text', 'scytale', 'columnar', 'fitness']
+    )
+    MAX_SEARCH = 7
+
+    def __init__(self, text, scy_key: int=1, col_key: tuple=()):
+        self.text = text
+        self.scy_key = scy_key
+        self.col_key = col_key
+        self.auto_scy = scy_key == 1
+        self.auto_col = not bool(col_key)
+        self.key = ScyColTrans.Key(self.scy_key, self.col_key)
+
+    def encipher(self, give_key=False):
+        if self.auto_scy and self.auto_col:
+            possible_texts = list()
+            for pos_scy_key in range(2, ScyColTrans.MAX_SEARCH):
+                pos_text = Scytale(self.text, key=pos_scy_key).encipher()
+                best_from_key = ColTrans(pos_text).encipher(give_key=True)
+                possible_texts.append(
+                    ScyColTrans.TextScyColFit(
+                        text=best_from_key.text,
+                        scytale=pos_scy_key,
+                        columnar=best_from_key.key,
+                        fitness=english_quadgram_fitness(best_from_key.text)
+                    )
+                )
+            best = sorted(
+                possible_texts,
+                key=lambda elem: elem.fitness,
+                reverse=True
+            )[0]
+            enciphered = best.text
+            self.key = ScyColTrans.Key(
+                scytale=best.scytale,
+                columnar=best.columnar
+            )
+        elif self.auto_col:
+            text = Scytale(self.text, key=self.scy_key).encipher()
+            best = ColTrans(text).encipher(give_key=True)
+            enciphered = best.text
+            self.key = ScyColTrans.Key(
+                scytale=self.scy_key,
+                columnar=best.key
+            )
+        elif self.auto_scy:
+            possible_texts = list()
+            for pos_scy_key in range(2, ScyColTrans.MAX_SEARCH):
+                pos_text = Scytale(self.text, key=pos_scy_key).encipher()
+                column_text = ColTrans(pos_text, key=self.col_key).encipher()
+                possible_texts.append(
+                    ScyColTrans.TextScyColFit(
+                        text=column_text,
+                        scytale=pos_scy_key,
+                        columnar=self.col_key,
+                        fitness=english_quadgram_fitness(column_text)
+                    )
+                )
+            best = sorted(
+                possible_texts,
+                key=lambda elem: elem.fitness,
+                reverse=True
+            )[0]
+            enciphered = best.text
+            self.key = ScyColTrans.Key(
+                scytale=best.scytale,
+                columnar=self.col_key
+            )
+        else:
+            scytale = Scytale(self.text, key=self.scy_key).encipher()
+            enciphered = ColTrans(scytale, key=self.col_key).encipher()
         if give_key:
             return TextKey(match(self.text, enciphered), self.key)
         else:
@@ -795,8 +875,17 @@ class Challenge2016:
     ).encipher()
     solution_5A = MonoSub(
         cipher_texts.Challenge2016.encrypted_text_5A,
-        key="charlier",
+        key="charlie",
         keyword=True
+    ).encipher()
+    solution_5B = ScyColTrans(
+        cipher_texts.Challenge2016.encrypted_text_5B,
+        scy_key=5,
+        col_key=(4, 0, 1, 3, 2)
+    ).encipher()
+    solution_6A = Viginere(
+        cipher_texts.Challenge2016.encrypted_text_6A,
+        key="nsa"
     ).encipher()
 
 
@@ -942,8 +1031,10 @@ if __name__ == "__main__":
     # print(Challenge2018.solution_2B)
     # print(Challenge2018.solution_3A)
     # print(Challenge2018.solution_3B)
-    x = cipher_texts.Challenge2016.encrypted_text_5B
-    y = Scytale(x, key=5)
-    z = ColTrans(y.encipher())
-    print(z.encipher(give_key=True))
+    x = cipher_texts.Challenge2016.encrypted_text_6A
+    y = Viginere(
+        x,
+        key="nsa"
+    )
+    print(Challenge2016.solution_6A)
     print("--- %s seconds ---" % (time() - start_time))
