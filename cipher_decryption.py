@@ -19,7 +19,7 @@ def match(original: str, formatted: str) -> str:
     >>> match('abcd', 'AbDC')
     >>> 'abdc'
 
-    >>> match('This sentence is KKKKtueKKKKKKKK', 'thissentenceistrue')
+    >>> match('This sentence is true.', 'thissentenceistrue')
     >>> This sentence is true.
     """
     formatted_index = 0
@@ -370,7 +370,7 @@ class Viginere:
         if give_key:
             return TextKey(match(self.text, enciphered), self.key)
         else:
-            return match(self.text, enciphered)
+            return enciphered
 
 
 class AffineViginere:
@@ -386,6 +386,7 @@ class AffineViginere:
                 (switch, 0) for switch in range(ENGLISH_LANG_LEN)
                 if gcd(switch, ENGLISH_LANG_LEN) == 1
             )
+            """
             aff_texts = (Affine(self.text, switch=possible_switch).encipher()
                          for possible_switch in possible_switches)
             vig_texts = (Viginere(aff_text).encipher()
@@ -397,6 +398,12 @@ class AffineViginere:
                 for vig_text in vig_texts)
             enciphered = sorted(
                 possible_texts, key=lambda text_chi: text_chi.chi)[0].text
+            """
+            for switch in possible_switches:
+                possible_text = Affine(self.text, switch=switch).encipher()
+                if Viginere(possible_text).prob_key_length != 1:
+                    break
+            enciphered = Viginere(possible_text).encipher()
         else:
             aff_text = Affine(self.text, switch=self.switch).encipher()
             enciphered = Viginere(aff_text, key=self.key).encipher()
@@ -450,6 +457,9 @@ class Scytale:
 
 
 class ScytaleViginere:
+
+    MAX_SEARCH = 10
+
     def __init__(self, text: str, length: int=1, key: str="", keep=[]):
         self.text = text
         self.length = length
@@ -460,7 +470,7 @@ class ScytaleViginere:
     def encipher(self):
         text = letters(self.text, keep=self.keep).lower()
         if self.auto:
-            for length in range(2, 10):
+            for length in range(2, ScytaleViginere.MAX_SEARCH):
                 possible_text = Scytale(
                     text, key=length, keep=self.keep).encipher()
                 if Viginere(possible_text).prob_key_length != 1:
@@ -602,7 +612,7 @@ class DuoSub:
             for col in key[1]:
                 substitutions[row + col] = english_chars[eng_index].upper()
                 eng_index += 1
-                if eng_index == english_chars.index("j"):
+                if eng_index == english_chars.index("j"):  # Skip j
                     eng_index += 1
         return substitutions
 
@@ -756,5 +766,5 @@ if __name__ == "__main__":
     # print(item)
     # print(MonoSub.keyword_to_key("loyalot"))
     # print(Challenge2017.solution_8A)
-    print(Challenge2017.solution_2B)
+    print(Challenge2017.solution_6B)
     print("--- %s seconds ---" % (time() - start_time))
