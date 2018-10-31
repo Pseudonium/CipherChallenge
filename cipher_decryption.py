@@ -793,6 +793,11 @@ class Challenge2016:
         "".join(reversed(cipher_texts.Challenge2016.encrypted_text_4B)),
         key=(2, 3, 1, 0, 4)
     ).encipher()
+    solution_5A = MonoSub(
+        cipher_texts.Challenge2016.encrypted_text_5A,
+        key="charlier",
+        keyword=True
+    ).encipher()
 
 
 class Challenge2017:
@@ -937,7 +942,8 @@ if __name__ == "__main__":
     # print(Challenge2018.solution_2B)
     # print(Challenge2018.solution_3A)
     # print(Challenge2018.solution_3B)
-    x = cipher_texts.Challenge2016.encrypted_text_4B
-    y = ColTrans("".join(reversed(x)))
-    print(Challenge2016.solution_4B)
+    x = cipher_texts.Challenge2016.encrypted_text_5B
+    y = Scytale(x, key=5)
+    z = ColTrans(y.encipher())
+    print(z.encipher(give_key=True))
     print("--- %s seconds ---" % (time() - start_time))
