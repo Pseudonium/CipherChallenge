@@ -4,6 +4,7 @@ from collections import namedtuple, defaultdict, Counter, OrderedDict
 from itertools import combinations, zip_longest
 from sys import getsizeof
 import cipher_texts
+import pdb
 
 start_time = time()
 # -----------------------
@@ -39,6 +40,14 @@ def mod_inverse(num: int, mod: int) -> int:
         if num * possible_inverse % mod == 1:
             return possible_inverse
     raise ValueError
+
+
+def word_reverse(text: str) -> str:
+    """Reverse all the words in a text."""
+    return " ".join(
+        "".join(reversed(word))
+        for word in text.split(" ")
+    )
 
 # -----------------------
 # -----------------------
@@ -616,6 +625,46 @@ class DuoSub:
             return match(self.text, enciphered)
 
 
+class AutoKey:
+    def __init__(self, text: str, key: str="", reset: int=None):
+        self.text = text
+        self.key = key
+        self.auto = not bool(key)
+        if reset:
+            self.reset = reset
+
+    @staticmethod
+    def char_shift(cipher_char, plain_or_key_char):
+        return english_chars[
+            (english_chars.index(
+                cipher_char
+            ) - english_chars.index(
+                plain_or_key_char
+            )) % ENGLISH_LANG_LEN
+        ]
+
+    def encipher(self, give_key=False):
+        if self.auto:
+            raise NotImplementedError
+        else:
+            text = letters(self.text).lower()
+            intial_plain = "".join(
+                self.char_shift(cipher_char, key_char)
+                for cipher_char, key_char
+                in zip(text, self.key)
+            )
+            start_index = len(intial_plain)
+            text = text[start_index:]
+            plain_index = 0
+            for char in text:
+                intial_plain += self.char_shift(
+                    char, intial_plain[plain_index]
+                )
+                plain_index += 1
+        return intial_plain
+    pass
+
+
 class Challenge2017:
     solution_1A = Caesar(
         cipher_texts.Challenge2017.encrypted_text_1A,
@@ -747,5 +796,10 @@ if __name__ == "__main__":
     # print(item)
     # print(MonoSub.keyword_to_key("loyalot"))
     # print(Challenge2017.solution_8A)
-    print(Challenge2017.solution_6B)
+    x = cipher_texts.Challenge2017.encrypted_text_8B
+    # print(word_reverse(x))
+    #print((english_chars.index("e") - english_chars.index("r")) % 26)
+    y = AutoKey(word_reverse(x), key="a")
+    # pdb.set_trace()
+    print(y.encipher())
     print("--- %s seconds ---" % (time() - start_time))
