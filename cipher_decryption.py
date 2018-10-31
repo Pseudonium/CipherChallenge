@@ -674,6 +674,13 @@ class AutoKey:
         return match(self.text, final_plain)
 
 
+class Challenge2016:
+    solution_1A = Caesar(
+        cipher_texts.Challenge2016.encrypted_text_1A,
+        shift=18
+    ).encipher()
+
+
 class Challenge2017:
     solution_1A = Caesar(
         cipher_texts.Challenge2017.encrypted_text_1A,
@@ -816,4 +823,6 @@ if __name__ == "__main__":
     # print(Challenge2018.solution_2B)
     # print(Challenge2018.solution_3A)
     # print(Challenge2018.solution_3B)
+    x = Affine(cipher_texts.Challenge2016.encrypted_text_1A)
+    print(Challenge2016.solution_1A)
     print("--- %s seconds ---" % (time() - start_time))
