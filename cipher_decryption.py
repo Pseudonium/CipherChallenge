@@ -4,6 +4,7 @@ from collections import namedtuple, defaultdict, Counter, OrderedDict
 from itertools import combinations, zip_longest
 from sys import getsizeof
 import cipher_texts
+import pdb
 
 start_time = time()
 # -----------------------
@@ -39,6 +40,14 @@ def mod_inverse(num: int, mod: int) -> int:
         if num * possible_inverse % mod == 1:
             return possible_inverse
     raise ValueError
+
+
+def word_reverse(text: str) -> str:
+    """Reverse all the words in a text."""
+    return " ".join(
+        "".join(reversed(word))
+        for word in text.split(" ")
+    )
 
 # -----------------------
 # -----------------------
@@ -616,6 +625,55 @@ class DuoSub:
             return match(self.text, enciphered)
 
 
+class AutoKey:
+    def __init__(self, text: str, key: str="", reset: int=None):
+        self.text = text
+        self.key = key
+        self.auto = not bool(key)
+        if reset:
+            self.reset = reset
+
+    @staticmethod
+    def char_shift(cipher_char, plain_or_key_char):
+        return english_chars[
+            (english_chars.index(
+                cipher_char
+            ) - english_chars.index(
+                plain_or_key_char
+            )) % ENGLISH_LANG_LEN
+        ]
+
+    def encipher(self, give_key=False):
+        if self.auto:
+            raise NotImplementedError
+        else:
+            text = letters(self.text).lower()
+            if hasattr(self, "reset"):
+                split_text = list(
+                    text[i:i + self.reset]
+                    for i in range(0, len(text), self.reset)
+                )
+            else:
+                split_text = [text]
+            final_plain = ""
+            for split in split_text:
+                initial_plain = "".join(
+                    self.char_shift(cipher_char, key_char)
+                    for cipher_char, key_char
+                    in zip(split, self.key)
+                )
+                start_index = len(initial_plain)
+                split = split[start_index:]
+                plain_index = 0
+                for char in split:
+                    initial_plain += self.char_shift(
+                        char, initial_plain[plain_index]
+                    )
+                    plain_index += 1
+                final_plain += initial_plain
+        return match(self.text, final_plain)
+
+
 class Challenge2017:
     solution_1A = Caesar(
         cipher_texts.Challenge2017.encrypted_text_1A,
@@ -697,55 +755,65 @@ class Challenge2017:
         "".join(reversed(cipher_texts.Challenge2017.encrypted_text_8A)),
         key="nijmegen"
     ).encipher()
+    solution_8B = match(
+        cipher_texts.Challenge2017.encrypted_text_8B,
+        letters(AutoKey(
+            word_reverse(cipher_texts.Challenge2017.encrypted_text_8B),
+            key="a",
+            reset=12
+        ).encipher())
+    )
 
 
-if __name__ == "__main__":
-    text_1A = Caesar(
+class Challenge2018:
+    solution_1A = Caesar(
         cipher_texts.Challenge2018.encrypted_text_1A,
         shift=19
-    )
-    solution_1A = text_1A.encipher()
-    text_1B = Caesar(
+    ).encipher()
+    solution_1B = Caesar(
         cipher_texts.Challenge2018.encrypted_text_1B,
         shift=15
-    )
-    solution_1B = text_1B.encipher()
-    text_2A = Caesar(
+    ).encipher()
+    solution_2A = Caesar(
         cipher_texts.Challenge2018.encrypted_text_2A,
         shift=19
-    )
-    solution_2A = text_2A.encipher()
-    text_2B = Affine(
+    ).encipher()
+    solution_2B = Affine(
         cipher_texts.Challenge2018.encrypted_text_2B,
         switch=(11, 4)
-    )
-    solution_2B = text_2B.encipher()
-    text_3A = Affine(
+    ).encipher()
+    solution_3A = Affine(
         cipher_texts.Challenge2018.encrypted_text_3A,
         switch=(9, 25)
-    )
-    solution_3A = text_3A.encipher()
-    text_3B = MonoSub(
+    ).encipher()
+    solution_3B = MonoSub(
         cipher_texts.Challenge2018.encrypted_text_3B,
         key="loyalot",
         keyword=True
-    )
-    solution_3B = text_3B.encipher()
-    #print("1A: ", solution_1A)
-    #print("1B: ", solution_1B)
-    #print("2A: ", solution_2A)
-    #print("2B: ", solution_2B)
-    #print("3A: ", solution_3A)
-    #print("3B: ", solution_3B)
-    """
-    text_2_1A = MonoSub(cipher_texts.Challenge2017.encrypted_text_1A)
-    text_2_3B = MonoSub(cipher_texts.Challenge2018.encrypted_text_3B)
-    print(text_2_1A.encipher())
-    """
-    # print(solution_3B)
-    # for item in combinations(range(26), 2):
-    # print(item)
-    # print(MonoSub.keyword_to_key("loyalot"))
+    ).encipher()
+
+
+if __name__ == "__main__":
+    # print(Challenge2017.solution_1A)
+    # print(Challenge2017.solution_1B)
+    # print(Challenge2017.solution_2A)
+    # print(Challenge2017.solution_2B)
+    # print(Challenge2017.solution_3A)
+    # print(Challenge2017.solution_3B)
+    # print(Challenge2017.solution_4A)
+    # print(Challenge2017.solution_4B)
+    # print(Challenge2017.solution_5A)
+    # print(Challenge2017.solution_5B)
+    # print(Challenge2017.solution_6A)
+    # print(Challenge2017.solution_6B)
+    # print(Challenge2017.solution_7A)
+    # print(Challenge2017.solution_7B)
     # print(Challenge2017.solution_8A)
-    print(Challenge2017.solution_6B)
+    # print(Challenge2017.solution_8B)
+    # print(Challenge2018.solution_1A)
+    # print(Challenge2018.solution_1B)
+    # print(Challenge2018.solution_2A)
+    # print(Challenge2018.solution_2B)
+    # print(Challenge2018.solution_3A)
+    # print(Challenge2018.solution_3B)
     print("--- %s seconds ---" % (time() - start_time))
