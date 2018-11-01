@@ -70,14 +70,17 @@ def simulated_annealing(
     temp = initial_temp
     current_key = initial_key
     for c in range(count):
+        print(c)
         parent_fitness = fitness(current_key)
         child_key = new_key(current_key)
         child_fitness = fitness(child_key)
         dF = child_fitness - parent_fitness
         if dF > 0:
             current_key = child_key
-        elif dF < 0 and math.e ** (dF/temp) > random.random():
+            print("New key!")
+        elif dF < 0 and math.e ** (dF/temp) >= random.random():
             current_key = child_key
+            print("New key!")
         temp -= temp_step
     return current_key
 # -----------------------
@@ -408,19 +411,6 @@ class AffineViginere:
                 (switch, 0) for switch in range(ENGLISH_LANG_LEN)
                 if math.gcd(switch, ENGLISH_LANG_LEN) == 1
             )
-            """
-            aff_texts = (Affine(self.text, switch=possible_switch).encipher()
-                         for possible_switch in possible_switches)
-            vig_texts = (Viginere(aff_text).encipher()
-                         for aff_text in aff_texts)
-            possible_texts = (
-                Affine.TextChiKey(
-                    text=vig_text, chi=english_1gram_chi(vig_text), key=None
-                )
-                for vig_text in vig_texts)
-            enciphered = sorted(
-                possible_texts, key=lambda text_chi: text_chi.chi)[0].text
-            """
             for switch in possible_switches:
                 possible_text = Affine(self.text, switch=switch).encipher()
                 if Viginere(possible_text).prob_key_length != 1:
@@ -860,6 +850,7 @@ class ScyColTrans:
 
 class Bifid:
     RowCol = collections.namedtuple('RowColumn', ['row', 'col'])
+    ALPHABET_NO_J = "ABCDEFGHIKLMNOPQRSTUVWXYZ"
 
     def __init__(self, text, period, key: str=""):
         self.text = text
@@ -882,7 +873,7 @@ class Bifid:
     def split_shift(split, key):
         low_key = key.lower()
         bifid_coords = list()
-        for char in list(split):
+        for char in list(letters(split).lower()):
             row = low_key.index(char) // 5
             col = low_key.index(char) % 5
             bifid_coords.extend((row, col))
@@ -900,17 +891,47 @@ class Bifid:
             for index in plain_coords
         )
 
+    @property
+    def text_fitness(self):
+        def key_fitness(key):
+            return english_quadgram_fitness(self.encipher(key=key))
+        return key_fitness
+
+    @staticmethod
+    def gen_new_key(key):
+        (swap_1, swap_2) = tuple(random.choices(range(25), k=2))
+        new_key = list(key)
+        new_key[swap_1], new_key[swap_2] = new_key[swap_2], new_key[swap_1]
+        return "".join(new_key)
+
+    def best_key(self):
+        return simulated_annealing(
+            initial_key=Bifid.ALPHABET_NO_J,
+            fitness=self.text_fitness,
+            new_key=self.gen_new_key,
+            count=10000,
+            initial_temp=70
+        )
+
     def encipher(self, key="", give_key=False):
         text = letters(self.text).lower()
-        if not key:
+        if not key and not self.key:
             raise NotImplementedError
         else:
+            if not key:
+                key = self.key
             split_text = (
-                text[i: i + len(key)]
-                for i in range(0, len(text), len(key))
+                text[i: i + self.period]
+                for i in range(0, len(text), self.period)
             )
-
-    pass
+            enciphered = "".join(
+                self.split_shift(split, key)
+                for split in split_text
+            )
+        if give_key:
+            return TextKey(match(self.text, enciphered), self.key)
+        else:
+            return match(self.text, enciphered)
 
 
 class Challenge2016:
@@ -1097,77 +1118,18 @@ class Challenge2018:
 
 if __name__ == "__main__":
     x = cipher_texts.Challenge2016.encrypted_text_7B
-    y = AffineViginere(x)
+    y = Bifid(
+        x,
+        period=4,
+        key="LIGOABCDEFHKMNPQRSTUVWXYZ"
+    )
     # print(y.encipher())
-    """
-    k_ey = {
-        'a': 15,
-        'b': 21,
-        'c': 22,
-        'd': 23,
-        'e': 24,
-        'f': 25,
-        'g': 13,
-        'h': 31,
-        'i': 12,
-        'k': 32,
-        'l': 11,
-        'm': 33,
-        'n': 34,
-        'o': 14,
-        'p': 35,
-        'q': 41,
-        'r': 42,
-        's': 43,
-        't': 44,
-        'u': 45,
-        'v': 51,
-        'w': 52,
-        'x': 53,
-        'y': 54,
-        'z': 55
-    }
-    text_3_16 = cipher_texts.Challenge2016.encrypted_text_7B
-    text_3_16 = letters(text_3_16).lower()
-    final = "".join(
-        str(k_ey[char])
-        for char in text_3_16
+    zzz = y.best_key()
+    print(zzz)
+    zyz = Bifid(
+        x,
+        period=4,
+        key=zzz
     )
-    split_final = list(
-        final[i: i + 8]
-        for i in range(0, len(final), 8)
-    )
-    final_final = list()
-    for split in split_final:
-        split1, split2 = split[:4], split[4:]
-        new_string = "".join(
-            a + b
-            for a, b in zip(split1, split2)
-        )
-        final_final.append(new_string)
-    final_final = "".join(final_final)
-    print(final)
-    print(split_final)
-    print(final_final)
-    res = dict((v, k) for k, v in k_ey.items())
-    print(res)
-    split_f_f = list(
-        final_final[i: i + 2]
-        for i in range(0, len(final_final), 2)
-    )
-    print(split_f_f)
-    z_10 = "".join(
-        res[int(thing)]
-        for thing in split_f_f
-    )
-    print(z_10)
-    """
-    # print(Bifid.key_to_square("LIGOABCDEFHKMNPQRSTUVWXYZ"))
-    print(
-        Bifid.split_shift(
-            "htpe",
-            "LIGOABCDEFHKMNPQRSTUVWXYZ"
-        )
-    )
-    print(math.e)
+    print(zyz.encipher())
     print("--- %s seconds ---" % (time.time() - start_time))
