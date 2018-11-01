@@ -65,12 +65,16 @@ def simulated_annealing(
     fitness,
     new_key,
     initial_temp=50,
-    count=10000
+    count=10000,
+    max_length=1000
 ):
     temp_step = initial_temp / count
     temp = initial_temp
     current_key = initial_key
+    same_key = 0
     for c in range(count):
+        if same_key == max_length:
+            break
         print(c)
         parent_fitness = fitness(current_key)
         child_key = new_key(current_key)
@@ -78,10 +82,14 @@ def simulated_annealing(
         dF = child_fitness - parent_fitness
         if dF > 0:
             current_key = child_key
+            same_key = 0
             print("New key!")
         elif dF < 0 and math.e ** (dF/temp) >= random.random():
             current_key = child_key
+            same_key = 0
             print("New key!")
+        else:
+            same_key += 1
         temp -= temp_step
     return current_key
 # -----------------------
@@ -171,10 +179,10 @@ def codex(text: str) -> float:
 english_4gram_expected_dict = dict()
 
 
-@functools.
 def english_quadgram_fitness(text: str) -> float:
     """Return the fitness of a text, based on quadgram count."""
     if not english_4gram_expected_dict:
+        print("Needed to make it.")
         with open("english_quadgrams.txt") as f:
             total = 0
             for line in f:
@@ -882,13 +890,14 @@ class Bifid:
     def split_shift(split, key):
         low_key = key.lower()
         bifid_coords = list()
-        for char in list(letters(split).lower()):
+        for char in split:
             row = low_key.index(char) // 5
             col = low_key.index(char) % 5
             bifid_coords.extend((row, col))
-        bifid_row_coords = bifid_coords[:len(bifid_coords)//2]
-        bifid_col_coords = bifid_coords[len(bifid_coords)//2:]
-        plain_coords = list(
+        half_split = len(bifid_coords)//2
+        bifid_row_coords = bifid_coords[:half_split]
+        bifid_col_coords = bifid_coords[half_split:]
+        plain_coords = (
             row*5 + col
             for row, col in zip(
                 bifid_row_coords,
@@ -903,7 +912,9 @@ class Bifid:
     @property
     def text_fitness(self):
         def key_fitness(key):
-            return english_quadgram_fitness(self.encipher(key=key))
+            return english_quadgram_fitness(
+                self.encipher(key=key)
+            )
         return key_fitness
 
     @staticmethod
@@ -922,7 +933,7 @@ class Bifid:
             initial_temp=70
         )
 
-    def encipher(self, key="", give_key=False):
+    def encipher(self, key="", give_key=False, pretty=False):
         text = letters(self.text).lower()
         if not key and self.auto_key:
             # First of all, see if we also have to search for a period
@@ -944,8 +955,6 @@ class Bifid:
                             period=possible_period
                         )
                     )
-                    print(possible_texts)
-                    # time.sleep(20)
                 best = sorted(
                     possible_texts,
                     key=lambda elem: elem.fitness,
@@ -957,7 +966,7 @@ class Bifid:
                 self.key = self.best_key()
         else:
             self.key = key
-        split_text = list(
+        split_text = (
             text[i: i + self.period]
             for i in range(0, len(text), self.period)
         )
@@ -965,10 +974,12 @@ class Bifid:
             self.split_shift(split, self.key)
             for split in split_text
         )
+        if pretty:
+            enciphered = match(self.text, enciphered)
         if give_key:
-            return TextKey(match(self.text, enciphered), self.key)
+            return TextKey(enciphered, self.key)
         else:
-            return match(self.text, enciphered)
+            return enciphered
 
 
 class Challenge2016:
@@ -1157,7 +1168,7 @@ if __name__ == "__main__":
     x = cipher_texts.Challenge2016.encrypted_text_7B
     y = Bifid(
         x,
-        # period=4,
+        period=4,
         # key="CEFDBRTUSQWYZXVKNPMHIOAGL"
     )
     # pdb.set_trace()
