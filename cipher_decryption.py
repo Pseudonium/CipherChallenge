@@ -179,6 +179,7 @@ def codex(text: str) -> float:
 english_4gram_expected_dict = dict()
 
 
+@functools.lru_cache(maxsize=128)
 def english_quadgram_fitness(text: str) -> float:
     """Return the fitness of a text, based on quadgram count."""
     if not english_4gram_expected_dict:
@@ -987,6 +988,111 @@ class Bifid:
             return enciphered
 
 
+class Hill:
+    EXPECT_QUAD = "THAT"
+    Top = collections.namedtuple('TopRow', ['a', 'b'])
+    Bottom = collections.namedtuple('BottomRow', ['c', 'd'])
+    Matrix = collections.namedtuple('Matrix', ['top', 'bottom'])
+    Vector = collections.namedtuple('Vector', ['top', 'bottom'])
+
+    def __init__(self, text, key: tuple=()):
+        self.text = text
+        if key:
+            top, bottom = key
+            self.key = Hill.Matrix(
+                top=Hill.Top(a=top[0], b=top[1]),
+                bottom=Hill.Bottom(c=bottom[0], d=bottom[1])
+            )
+            self.auto = False
+        else:
+            self.auto = True
+
+    @staticmethod
+    def bigram_crypt(bigram, key):
+        start = Hill.Vector(
+            top=english_chars.index(bigram[0]),
+            bottom=english_chars.index(bigram[1])
+        )
+        crypted = Hill.Vector(
+            top=(
+                key.top.a * start.top + key.top.b * start.bottom
+            ) % ENGLISH_LANG_LEN,
+            bottom=(
+                key.bottom.c * start.top + key.bottom.d * start.bottom
+            ) % ENGLISH_LANG_LEN
+        )
+        return english_chars[crypted.top] + english_chars[crypted.bottom]
+
+    @staticmethod
+    def find_matrix(quadgram):
+        """
+        Trying to solve this matrix equation:
+        ((a, b),  (e   (19
+        (c, d)) * f) = 7)
+        ((a, b),  (g   (0
+        (c, d)) * h) = 19)
+        with 19, 7, 0, 19 being the indices of "THAT".
+        Replace 19, 7, 0, 19 with i, j, k, l
+        Then, have to solve these equations:
+        ae + bf = i
+        ag + bh = k
+        ce + df = j
+        cg + dh = l
+        j being zero is the default case, so it's tricky for inverses.
+        However, that is solvable, and gives the following formulas:
+        (only work for "THAT", for now)
+        a = i * inv(e - f*g*inv(h))
+        b = (i - ae)*inv(f)
+        c = l*inv(g + j*h*inv(f) - e*h*inv(f))
+        d = (j - ec)*inv(f)
+        """
+        ell = ENGLISH_LANG_LEN
+        (i, j, k, l) = tuple(
+            english_chars.index(char)
+            for char in Hill.EXPECT_QUAD.lower()
+        )
+        (e, f, g, h) = tuple(english_chars.index(char) for char in quadgram)
+        a = (
+            i * mod_inverse(
+                e - f*g*mod_inverse(h, ell), ell
+            )
+        ) % ENGLISH_LANG_LEN
+        b = (
+            (i - a*e)*mod_inverse(f, ell)
+        ) % ENGLISH_LANG_LEN
+        c = (
+            l * mod_inverse(
+                g + j*h*mod_inverse(f, ell) - e*h*mod_inverse(f, ell), ell
+            )
+        ) % ENGLISH_LANG_LEN
+        d = (
+            (j - e*c)*mod_inverse(f, ell)
+        )
+        top = Hill.Top(a, b)
+        bottom = Hill.Bottom(c, d)
+        return Hill.Matrix(top, bottom)
+
+    def encipher(self, give_key=False):
+        text = letters(self.text).lower()
+        if self.auto:
+            quad_split = (
+                text[i: i + 4]
+                for i in range(0, len(text), 4)
+            )
+        split_text = (
+            text[i: i + 2]
+            for i in range(0, len(text), 2)
+        )
+        enciphered = "".join(
+            self.bigram_crypt(split, self.key)
+            for split in split_text
+        )
+        if give_key:
+            return TextKey(match(self.text, enciphered), self.key)
+        else:
+            return match(self.text, enciphered)
+
+
 class Challenge2016:
     solution_1A = Caesar(
         cipher_texts.Challenge2016.encrypted_text_1A,
@@ -1048,6 +1154,11 @@ class Challenge2016:
         "".join(reversed(cipher_texts.Challenge2016.encrypted_text_7A)),
         key="usehill"
     ).encipher()
+    solution_7B = Bifid(
+        cipher_texts.Challenge2016.encrypted_text_7B,
+        period=4,
+        key="LIGOABCDEFHKMNPQRSTUVWXYZ".lower()
+    ).encipher(pretty=True)
 
 
 class Challenge2017:
@@ -1167,19 +1278,44 @@ class Challenge2018:
         key="loyalot",
         keyword=True
     ).encipher()
+    solution_4A = MonoSub(
+        cipher_texts.Challenge2018.encrypted_text_4A,
+        key="lidar",
+        keyword=True
+    ).encipher()
 
 
 if __name__ == "__main__":
-    x = cipher_texts.Challenge2016.encrypted_text_7B
-    y = Bifid(
-        x,
-        period=4,
-        key="CEFDBRTUSQWYZXVKNPMHIOAGL"
-    )
-    # pdb.set_trace()
-    p0 = time.time()
-    for i in range(3000):
-        y.encipher(give_key=True)
-    p1 = time.time()
-    print("Encipher in 1000: ", p1 - p0)
+    x = cipher_texts.Challenge2018.encrypted_text_4B
+    y = MonoSub(x, key="realpoitk", keyword=True)
+    print(y.encipher())
+    key = {
+        'r': 'A',
+        'e': 'B',
+        'a': 'C',
+        'l': 'D',
+        'p': 'E',
+        'o': 'F',
+        'i': 'G',
+        't': 'H',
+        'k': 'I',
+        'u': 'J',
+        'v': 'K',
+        'w': 'L',
+        'x': 'M',
+        'y': 'N',
+        'z': 'O',
+        'b': 'P',
+        's': 'Q',
+        'd': 'R',
+        'f': 'S',
+        'g': 'T',
+        'h': 'U',
+        'j': 'V',
+        'm': 'W',
+        'n': 'X',
+        'q': 'Y',
+        'c': 'Z'
+    }
+    print("".join(iter(key)))
     print("--- %s seconds ---" % (time.time() - start_time))
