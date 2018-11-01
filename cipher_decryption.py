@@ -851,12 +851,17 @@ class ScyColTrans:
 class Bifid:
     RowCol = collections.namedtuple('RowColumn', ['row', 'col'])
     ALPHABET_NO_J = "ABCDEFGHIKLMNOPQRSTUVWXYZ"
+    TextFitKeyPer = collections.namedtuple(
+        'TextFitnessKeyPeriod',
+        ['text', 'fitness', 'key', 'period']
+    )
+    MAX_SEARCH = 7
 
-    def __init__(self, text, period: int=2, key: str=""):
+    def __init__(self, text, period: int=1, key: str=""):
         self.text = text
         self.period = period
         self.key = key
-        self.auto_period = period <= 2
+        self.auto_period = period < 2
         self.auto_key = not bool(key)
 
     @staticmethod
@@ -915,26 +920,51 @@ class Bifid:
             initial_temp=70
         )
 
-    def encipher(self, key="", give_key=False, period: int=2):
+    def encipher(self, key="", give_key=False):
         text = letters(self.text).lower()
         if not key and self.auto_key:
             # First of all, see if we also have to search for a period
             if self.auto_period:
-                raise NotImplementedError
-            key = self.best_key()
+                possible_texts = list()
+                for possible_period in range(2, Bifid.MAX_SEARCH):
+                    print("Testing period: ", possible_period)
+                    time.sleep(3)
+                    possible_text = Bifid(
+                        self.text,
+                        period=possible_period
+                    ).encipher(give_key=True)
+                    possible_texts.append(
+                        Bifid.TextFitKeyPer(
+                            text=possible_text.text,
+                            fitness=english_quadgram_fitness(
+                                possible_text.text),
+                            key=possible_text.key,
+                            period=possible_period
+                        )
+                    )
+                    print(possible_texts)
+                    # time.sleep(20)
+                best = sorted(
+                    possible_texts,
+                    key=lambda elem: elem.fitness,
+                    reverse=True
+                )[0]
+                self.period = best.period
+                self.key = best.key
+            else:
+                self.key = self.best_key()
         else:
-            if not key:
-                key = self.key
-        split_text = (
+            self.key = key
+        split_text = list(
             text[i: i + self.period]
             for i in range(0, len(text), self.period)
         )
         enciphered = "".join(
-            self.split_shift(split, key)
+            self.split_shift(split, self.key)
             for split in split_text
         )
         if give_key:
-            return TextKey(match(self.text, enciphered), key)
+            return TextKey(match(self.text, enciphered), self.key)
         else:
             return match(self.text, enciphered)
 
@@ -1125,16 +1155,9 @@ if __name__ == "__main__":
     x = cipher_texts.Challenge2016.encrypted_text_7B
     y = Bifid(
         x,
-        period=4,
-        # key="LIGOABCDEFHKMNPQRSTUVWXYZ"
+        # period=4,
+        # key="CEFDBRTUSQWYZXVKNPMHIOAGL"
     )
-    print(y.encipher())
-    #zzz = y.best_key()
-    # print(zzz)
-    # zyz = Bifid(
-    #    x,
-    #    period=4,
-    #    key=zzz
-    # )
-    # print(zyz.encipher())
+    # pdb.set_trace()
+    print(y.encipher(give_key=True))
     print("--- %s seconds ---" % (time.time() - start_time))
