@@ -852,10 +852,12 @@ class Bifid:
     RowCol = collections.namedtuple('RowColumn', ['row', 'col'])
     ALPHABET_NO_J = "ABCDEFGHIKLMNOPQRSTUVWXYZ"
 
-    def __init__(self, text, period, key: str=""):
+    def __init__(self, text, period: int=2, key: str=""):
         self.text = text
         self.period = period
         self.key = key
+        self.auto_period = period <= 2
+        self.auto_key = not bool(key)
 
     @staticmethod
     def key_to_square(key):
@@ -913,23 +915,26 @@ class Bifid:
             initial_temp=70
         )
 
-    def encipher(self, key="", give_key=False):
+    def encipher(self, key="", give_key=False, period: int=2):
         text = letters(self.text).lower()
-        if not key and not self.key:
-            raise NotImplementedError
+        if not key and self.auto_key:
+            # First of all, see if we also have to search for a period
+            if self.auto_period:
+                raise NotImplementedError
+            key = self.best_key()
         else:
             if not key:
                 key = self.key
-            split_text = (
-                text[i: i + self.period]
-                for i in range(0, len(text), self.period)
-            )
-            enciphered = "".join(
-                self.split_shift(split, key)
-                for split in split_text
-            )
+        split_text = (
+            text[i: i + self.period]
+            for i in range(0, len(text), self.period)
+        )
+        enciphered = "".join(
+            self.split_shift(split, key)
+            for split in split_text
+        )
         if give_key:
-            return TextKey(match(self.text, enciphered), self.key)
+            return TextKey(match(self.text, enciphered), key)
         else:
             return match(self.text, enciphered)
 
@@ -1121,15 +1126,15 @@ if __name__ == "__main__":
     y = Bifid(
         x,
         period=4,
-        key="LIGOABCDEFHKMNPQRSTUVWXYZ"
+        # key="LIGOABCDEFHKMNPQRSTUVWXYZ"
     )
-    # print(y.encipher())
-    zzz = y.best_key()
-    print(zzz)
-    zyz = Bifid(
-        x,
-        period=4,
-        key=zzz
-    )
-    print(zyz.encipher())
+    print(y.encipher())
+    #zzz = y.best_key()
+    # print(zzz)
+    # zyz = Bifid(
+    #    x,
+    #    period=4,
+    #    key=zzz
+    # )
+    # print(zyz.encipher())
     print("--- %s seconds ---" % (time.time() - start_time))
