@@ -1,12 +1,12 @@
-from time import time as time
-from math import gcd, log10, ceil
-from collections import namedtuple, defaultdict, Counter, OrderedDict
-from itertools import combinations, zip_longest, permutations
-from sys import getsizeof
+import time
+import math
+import collections
+import itertools
 import cipher_texts
 import pdb
+import random
 
-start_time = time()
+start_time = time.time()
 # -----------------------
 # -----------------------
 # ---Utility functions---
@@ -58,6 +58,28 @@ def pad_to_length(string: str, length: int, fillvalue=" "):
         new_string += fillvalue
         return pad_to_length(new_string, length, fillvalue=fillvalue)
 
+
+def simulated_annealing(
+    initial_key,
+    fitness,
+    new_key,
+    initial_temp=50,
+    count=10000
+):
+    temp_step = initial_temp / count
+    temp = initial_temp
+    current_key = initial_key
+    for c in range(count):
+        parent_fitness = fitness(current_key)
+        child_key = new_key(current_key)
+        child_fitness = fitness(child_key)
+        dF = child_fitness - parent_fitness
+        if dF > 0:
+            current_key = child_key
+        elif dF < 0 and math.e ** (dF/temp) > random.random():
+            current_key = child_key
+        temp -= temp_step
+    return current_key
 # -----------------------
 # -----------------------
 # --Frequency analysis---
@@ -84,20 +106,20 @@ english_1gram_expected_dict = {
     'q': 0.12, 'z': 0.09
 }
 
-CharFreq = namedtuple(
+CharFreq = collections.namedtuple(
     'CharacterFrequency', ['character', 'frequency']
 )
-TextFit = namedtuple(
+TextFit = collections.namedtuple(
     "TextFitness", ['text', 'fitness']
 )
-TextKey = namedtuple(
+TextKey = collections.namedtuple(
     "TextKey", ['text', 'key']
 )
 
 
 def auto_freq_analyser(text: str, keep: list=[]) -> list:
     """Analyse the frequency of characters in a text."""
-    local_alphabet_freq = defaultdict(int)
+    local_alphabet_freq = collections.defaultdict(int)
     text = letters(text, keep=keep).lower()
     for character in text:
         local_alphabet_freq[character] += 1
@@ -123,7 +145,7 @@ def english_1gram_chi(text: str) -> float:
         count[1] for count in sorted(counts.items())
     )
     expected = (
-        ceil(english_1gram_expected_dict[char] * (
+        math.ceil(english_1gram_expected_dict[char] * (
             len(text) / 100)
         ) for char in english_chars
     )
@@ -136,7 +158,7 @@ def codex(text: str) -> float:
     length = len(text)
     return sum(
         count * (count - 1)
-        for count in Counter(text).values()
+        for count in collections.Counter(text).values()
     )/(
         length * (length - 1)
     )
@@ -155,7 +177,7 @@ def english_quadgram_fitness(text: str) -> float:
                 english_4gram_expected_dict[line[0]] = int(line[1])
                 total += int(line[1])
             for key, count in english_4gram_expected_dict.items():
-                english_4gram_expected_dict[key] = log10(count/total)
+                english_4gram_expected_dict[key] = math.log10(count/total)
     fitness = 0
     text = letters(text).upper()
     for index in range(len(text) - 3):
@@ -208,8 +230,8 @@ class Caesar:
 
 class Affine:
 
-    Key = namedtuple('AffineKey', ['a', 'b'])
-    TextChiKey = namedtuple('TextChiKey', ['text', 'chi', 'key'])
+    Key = collections.namedtuple('AffineKey', ['a', 'b'])
+    TextChiKey = collections.namedtuple('TextChiKey', ['text', 'chi', 'key'])
     MAX_SEARCH = 5
 
     def __init__(self, text: str, switch: tuple=(1, 0)):
@@ -225,7 +247,7 @@ class Affine:
                 self.text
             )[0:Affine.MAX_SEARCH]
         )
-        return combinations(freq_chars, 2)
+        return itertools.combinations(freq_chars, 2)
 
     @property
     def prob_keys(self) -> list:
@@ -295,7 +317,7 @@ class Affine:
 
 class Viginere:
 
-    ChiShift = namedtuple("ChiShift", ['chi', 'shift'])
+    ChiShift = collections.namedtuple("ChiShift", ['chi', 'shift'])
     MAX_SEARCH = 20
 
     def __init__(self, text: str, key: str=""):
@@ -365,7 +387,7 @@ class Viginere:
             shifted_split.append(split)
         enciphered = "".join(
             "".join(chunk)
-            for chunk in zip_longest(*shifted_split, fillvalue="")
+            for chunk in itertools.zip_longest(*shifted_split, fillvalue="")
         )
         if give_key:
             return TextKey(match(self.text, enciphered), self.key)
@@ -384,7 +406,7 @@ class AffineViginere:
         if self.auto:
             possible_switches = (
                 (switch, 0) for switch in range(ENGLISH_LANG_LEN)
-                if gcd(switch, ENGLISH_LANG_LEN) == 1
+                if math.gcd(switch, ENGLISH_LANG_LEN) == 1
             )
             """
             aff_texts = (Affine(self.text, switch=possible_switch).encipher()
@@ -411,7 +433,8 @@ class AffineViginere:
 
 
 class Scytale:
-    TextFitLen = namedtuple("TextFitnessLength", ['text', 'fitness', 'length'])
+    TextFitLen = collections.namedtuple(
+        "TextFitnessLength", ['text', 'fitness', 'length'])
     MAX_SEARCH = 10
 
     def __init__(self, text: str, key: int=1, auto: bool=True, keep=[]):
@@ -488,8 +511,8 @@ class ScytaleViginere:
 
 class MonoSub:
 
-    KeyFit = namedtuple('KeyFitness', ['key', 'fitness'])
-    CharSwap = namedtuple('CharSwap', ['char', 'swap_char'])
+    KeyFit = collections.namedtuple('KeyFitness', ['key', 'fitness'])
+    CharSwap = collections.namedtuple('CharSwap', ['char', 'swap_char'])
     MAX_SEARCH = 1000
 
     def __init__(self, text: str, key=None, keyword=False):
@@ -502,7 +525,8 @@ class MonoSub:
     @staticmethod
     def keyword_to_key(key: str) -> dict:
         """Converts a keyword into a substituiton dict."""
-        new_key = "".join(OrderedDict.fromkeys(letters(key).lower()))
+        new_key = "".join(
+            collections.OrderedDict.fromkeys(letters(key).lower()))
         start = max(english_chars.index(char) for char in new_key)
         characters = english_chars[start:] + english_chars[:start]
         for char in characters:
@@ -550,7 +574,7 @@ class MonoSub:
             parent_text = self.encipher(key=current_key)
             parent_fit = english_quadgram_fitness(parent_text)
             possible_keys = [MonoSub.KeyFit(current_key, parent_fit)]
-            for swap in combinations(range(ENGLISH_LANG_LEN), 2):
+            for swap in itertools.combinations(range(ENGLISH_LANG_LEN), 2):
                 new_key = self.new_key(current_key, swap)
                 child_text = self.encipher(key=new_key)
                 child_fit = english_quadgram_fitness(child_text)
@@ -688,7 +712,7 @@ class ColTrans:
 
     MAX_SEARCH = 7
 
-    TextFitPerm = namedtuple(
+    TextFitPerm = collections.namedtuple(
         'TextFitnessPermutation',
         ['text', 'fitness', 'perm']
     )
@@ -720,7 +744,7 @@ class ColTrans:
                     text[i: i + key_length]
                     for i in range(0, len(text), key_length)
                 )
-                for perm in permutations(range(key_length)):
+                for perm in itertools.permutations(range(key_length)):
                     enciphered = "".join(
                         self.permute(split, perm)
                         for split in split_text
@@ -755,8 +779,8 @@ class ColTrans:
 
 
 class ScyColTrans:
-    Key = namedtuple('Key', ['scytale', 'columnar'])
-    TextScyColFit = namedtuple(
+    Key = collections.namedtuple('Key', ['scytale', 'columnar'])
+    TextScyColFit = collections.namedtuple(
         'TextScytaleColumnar',
         ['text', 'scytale', 'columnar', 'fitness']
     )
@@ -832,6 +856,61 @@ class ScyColTrans:
             return TextKey(match(self.text, enciphered), self.key)
         else:
             return match(self.text, enciphered)
+
+
+class Bifid:
+    RowCol = collections.namedtuple('RowColumn', ['row', 'col'])
+
+    def __init__(self, text, period, key: str=""):
+        self.text = text
+        self.period = period
+        self.key = key
+
+    @staticmethod
+    def key_to_square(key):
+        split_key = list(
+            key[i: i + 5]
+            for i in range(0, 25, 5)
+        )
+        square = list(
+            list(split)
+            for split in split_key
+        )
+        return square
+
+    @staticmethod
+    def split_shift(split, key):
+        low_key = key.lower()
+        bifid_coords = list()
+        for char in list(split):
+            row = low_key.index(char) // 5
+            col = low_key.index(char) % 5
+            bifid_coords.extend((row, col))
+        bifid_row_coords = bifid_coords[:len(bifid_coords)//2]
+        bifid_col_coords = bifid_coords[len(bifid_coords)//2:]
+        plain_coords = list(
+            row*5 + col
+            for row, col in zip(
+                bifid_row_coords,
+                bifid_col_coords
+            )
+        )
+        return "".join(
+            low_key[index]
+            for index in plain_coords
+        )
+
+    def encipher(self, key="", give_key=False):
+        text = letters(self.text).lower()
+        if not key:
+            raise NotImplementedError
+        else:
+            split_text = (
+                text[i: i + len(key)]
+                for i in range(0, len(text), len(key))
+            )
+
+    pass
 
 
 class Challenge2016:
@@ -1017,29 +1096,78 @@ class Challenge2018:
 
 
 if __name__ == "__main__":
-    # print(Challenge2017.solution_1A)
-    # print(Challenge2017.solution_1B)
-    # print(Challenge2017.solution_2A)
-    # print(Challenge2017.solution_2B)
-    # print(Challenge2017.solution_3A)
-    # print(Challenge2017.solution_3B)
-    # print(Challenge2017.solution_4A)
-    # print(Challenge2017.solution_4B)
-    # print(Challenge2017.solution_5A)
-    # print(Challenge2017.solution_5B)
-    # print(Challenge2017.solution_6A)
-    # print(Challenge2017.solution_6B)
-    # print(Challenge2017.solution_7A)
-    # print(Challenge2017.solution_7B)
-    # print(Challenge2017.solution_8A)
-    # print(Challenge2017.solution_8B)
-    # print(Challenge2018.solution_1A)
-    # print(Challenge2018.solution_1B)
-    # print(Challenge2018.solution_2A)
-    # print(Challenge2018.solution_2B)
-    # print(Challenge2018.solution_3A)
-    # print(Challenge2018.solution_3B)
     x = cipher_texts.Challenge2016.encrypted_text_7B
     y = AffineViginere(x)
-    print(y.encipher())
-    print("--- %s seconds ---" % (time() - start_time))
+    # print(y.encipher())
+    """
+    k_ey = {
+        'a': 15,
+        'b': 21,
+        'c': 22,
+        'd': 23,
+        'e': 24,
+        'f': 25,
+        'g': 13,
+        'h': 31,
+        'i': 12,
+        'k': 32,
+        'l': 11,
+        'm': 33,
+        'n': 34,
+        'o': 14,
+        'p': 35,
+        'q': 41,
+        'r': 42,
+        's': 43,
+        't': 44,
+        'u': 45,
+        'v': 51,
+        'w': 52,
+        'x': 53,
+        'y': 54,
+        'z': 55
+    }
+    text_3_16 = cipher_texts.Challenge2016.encrypted_text_7B
+    text_3_16 = letters(text_3_16).lower()
+    final = "".join(
+        str(k_ey[char])
+        for char in text_3_16
+    )
+    split_final = list(
+        final[i: i + 8]
+        for i in range(0, len(final), 8)
+    )
+    final_final = list()
+    for split in split_final:
+        split1, split2 = split[:4], split[4:]
+        new_string = "".join(
+            a + b
+            for a, b in zip(split1, split2)
+        )
+        final_final.append(new_string)
+    final_final = "".join(final_final)
+    print(final)
+    print(split_final)
+    print(final_final)
+    res = dict((v, k) for k, v in k_ey.items())
+    print(res)
+    split_f_f = list(
+        final_final[i: i + 2]
+        for i in range(0, len(final_final), 2)
+    )
+    print(split_f_f)
+    z_10 = "".join(
+        res[int(thing)]
+        for thing in split_f_f
+    )
+    print(z_10)
+    """
+    # print(Bifid.key_to_square("LIGOABCDEFHKMNPQRSTUVWXYZ"))
+    print(
+        Bifid.split_shift(
+            "htpe",
+            "LIGOABCDEFHKMNPQRSTUVWXYZ"
+        )
+    )
+    print(math.e)
+    print("--- %s seconds ---" % (time.time() - start_time))
