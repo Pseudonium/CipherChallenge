@@ -2,6 +2,7 @@ import time
 import math
 import collections
 import itertools
+import functools
 import cipher_texts
 import pdb
 import random
@@ -170,6 +171,7 @@ def codex(text: str) -> float:
 english_4gram_expected_dict = dict()
 
 
+@functools.
 def english_quadgram_fitness(text: str) -> float:
     """Return the fitness of a text, based on quadgram count."""
     if not english_4gram_expected_dict:
