@@ -891,12 +891,17 @@ class Bifid:
         low_key = key.lower()
         bifid_coords = list()
         for char in split:
-            row = low_key.index(char) // 5
-            col = low_key.index(char) % 5
+            position = low_key.index(char)
+            row = position // 5
+            col = position % 5
             bifid_coords.extend((row, col))
         half_split = len(bifid_coords)//2
-        bifid_row_coords = bifid_coords[:half_split]
-        bifid_col_coords = bifid_coords[half_split:]
+        bifid_row_coords = itertools.islice(
+            bifid_coords, 0, half_split
+        )
+        bifid_col_coords = itertools.islice(
+            bifid_coords, half_split, half_split*2
+        )
         plain_coords = (
             row*5 + col
             for row, col in zip(
@@ -964,7 +969,7 @@ class Bifid:
                 self.key = best.key
             else:
                 self.key = self.best_key()
-        else:
+        elif key:
             self.key = key
         split_text = (
             text[i: i + self.period]
@@ -1169,8 +1174,12 @@ if __name__ == "__main__":
     y = Bifid(
         x,
         period=4,
-        # key="CEFDBRTUSQWYZXVKNPMHIOAGL"
+        key="CEFDBRTUSQWYZXVKNPMHIOAGL"
     )
     # pdb.set_trace()
-    print(y.encipher(give_key=True))
+    p0 = time.time()
+    for i in range(3000):
+        y.encipher(give_key=True)
+    p1 = time.time()
+    print("Encipher in 1000: ", p1 - p0)
     print("--- %s seconds ---" % (time.time() - start_time))
