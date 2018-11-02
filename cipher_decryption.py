@@ -142,6 +142,7 @@ def simulated_annealing(
 
 ENGLISH_LANG_LEN = 26
 ENGLISH_LOWER_CODEX = 0.06
+ENGLISH_UPPER_CODEX = 0.071
 
 english_chars = [
     'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n',
@@ -726,6 +727,72 @@ class MultiSub:
             self.multi_to_mono(self.text, self.size, self.keep)
         ).encipher(give_key=True)
         return TextKey(best.text, best.key)
+
+
+class Straddle:
+    TextKeyCodex = collections.namedtuple(
+        'TextKeyCodex', ['text', 'key', 'codex'])
+
+    def __init__(self, text):
+        self.text = text
+
+    def convert_to_eng(self, blanks):
+        row_num = 0
+        final_ls = list()
+        for index, char in enumerate(self.text):
+            if row_num != 0:
+                row_num = 0
+                continue
+            int_c = int(char)
+            if int_c not in blanks:
+                final_ls.append(char)
+            else:
+                row_num = 1
+                final_ls.append(char + self.text[index + 1])
+        substitutions = {}
+        eng_index = 0
+        final_string = ""
+        for item in final_ls:
+            if item not in substitutions:
+                substitutions[item] = english_chars[eng_index]
+                eng_index += 1
+            final_string += substitutions[item]
+        return final_string
+
+    def encipher(self, give_key=False):
+        possible_keys = list()
+        for blanks in itertools.combinations(range(10), 2):
+            try:
+                possible_text = y.convert_to_eng(blanks)
+            except IndexError:
+                continue
+            else:
+                if (
+                    ENGLISH_UPPER_CODEX > codex(possible_text)
+                    and codex(possible_text) > ENGLISH_LOWER_CODEX
+                ):
+                    print("Found one! ", blanks)
+                    possible_keys.append(
+                        Straddle.TextKeyCodex(
+                            text=possible_text,
+                            key=blanks,
+                            codex=codex(possible_text)
+                        )
+                    )
+                continue
+        print(possible_keys)
+        best = sorted(
+            possible_keys,
+            key=lambda elem: elem.codex,
+            reverse=True
+        )[0]
+        enciphered = MonoSub(
+            best.text
+        ).encipher()
+        if give_key:
+            return TextKey(enciphered, best.key)
+        else:
+            return enciphered
 
 
 class AutoKey:
@@ -1588,16 +1655,10 @@ class Challenge2018:
 
 
 if __name__ == "__main__":
-    x = cipher_texts.Test.playfar_encrypted
-    y = Playfair(
-        x,
-        # key="LOYATBCDEFGHIKMNPQRSUVWXZ"
+    x = letters(
+        cipher_texts.Test.straddle_encrypted,
+        keep=[str(i) for i in range(10)]
     )
-    z = "".join(
-        y.bigram_crypt(bigram, key="LOYATBCDEFGHIKMNPQRSUVWXZ")
-        for bigram in chunked(x, 2)
-    )
-    # print(z)
-    # print(Playfair.normalise(z))
-    print(y.encipher())
+    y = Straddle(x)
+    print(y.encipher(give_key=True))
     print("--- %s seconds ---" % (time.time() - start_time))
