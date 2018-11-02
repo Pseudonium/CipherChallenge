@@ -795,10 +795,11 @@ class Straddle:
 
 
 class AutoKey:
-    def __init__(self, text: str, key: str="", reset: int=None):
+    def __init__(self, text: str, size, key: str="", reset: int=None):
         self.text = text
         self.key = key
         self.auto = not bool(key)
+        self.size = size
         if reset:
             self.reset = reset
 
@@ -812,35 +813,77 @@ class AutoKey:
             )) % ENGLISH_LANG_LEN
         ]
 
-    def encipher(self, give_key=False):
-        if self.auto:
-            raise NotImplementedError
-        else:
-            text = letters(self.text).lower()
-            if hasattr(self, "reset"):
-                split_text = list(
-                    text[i:i + self.reset]
-                    for i in range(0, len(text), self.reset)
-                )
+    @property
+    def text_fitness(self):
+        def key_fitness(key):
+            return english_quadgram_fitness(
+                self.encipher(key=key)
+            )
+        return key_fitness
+
+    @staticmethod
+    def gen_new_key(key):
+        choice = random.randrange(len(key))
+        new_letter = english_chars[random.randrange(26)]
+        new_key = list(key)
+        new_key[choice] = new_letter
+        return "".join(new_key)
+
+    @property
+    def best_key(self):
+        initial = "".join(
+            random.choice(english_chars)
+            for i in range(self.size)
+        )
+        return simulated_annealing(
+            initial_key=initial,
+            fitness=self.text_fitness,
+            new_key=AutoKey.gen_new_key,
+            initial_temp=30,
+            count=10000,
+            max_length=1000,
+            stale=5000,
+            stale_fitness=-20000,
+            threshold=-19000
+        )
+
+    def encipher(self, key="", give_key=False, pretty=False):
+        if not key:
+            if self.key:
+                key = self.key
             else:
-                split_text = [text]
-            final_plain = ""
-            for split in split_text:
-                initial_plain = "".join(
-                    self.char_shift(cipher_char, key_char)
-                    for cipher_char, key_char
-                    in zip(split, self.key)
+                key = self.best_key
+        text = letters(self.text).lower()
+        if hasattr(self, "reset"):
+            split_text = list(
+                text[i:i + self.reset]
+                for i in range(0, len(text), self.reset)
+            )
+        else:
+            split_text = [text]
+        final_plain = ""
+        for split in split_text:
+            initial_plain = "".join(
+                self.char_shift(cipher_char, key_char)
+                for cipher_char, key_char
+                in zip(split, key)
+            )
+            start_index = len(initial_plain)
+            split = split[start_index:]
+            plain_index = 0
+            for char in split:
+                initial_plain += self.char_shift(
+                    char, initial_plain[plain_index]
                 )
-                start_index = len(initial_plain)
-                split = split[start_index:]
-                plain_index = 0
-                for char in split:
-                    initial_plain += self.char_shift(
-                        char, initial_plain[plain_index]
-                    )
-                    plain_index += 1
-                final_plain += initial_plain
-        return match(self.text, final_plain)
+                plain_index += 1
+            final_plain += initial_plain
+        enciphered = final_plain
+        if pretty:
+            enciphered = match(self.text, enciphered)
+        if give_key:
+            return TextKey(enciphered, key)
+        else:
+            return enciphered
 
 
 class ColTrans:
@@ -1703,6 +1746,7 @@ class Challenge2017:
         cipher_texts.Challenge2017.encrypted_text_8B,
         letters(AutoKey(
             word_reverse(cipher_texts.Challenge2017.encrypted_text_8B),
+            size=1,
             key="a",
             reset=12
         ).encipher())
