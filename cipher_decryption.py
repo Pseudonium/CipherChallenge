@@ -1282,6 +1282,93 @@ class Playfair:
             return match(self.text, enciphered)
 
 
+class Foursquare:
+    ALPHABET_NO_J = "ABCDEFGHIKLMNOPQRSTUVWXYZ"
+
+    def __init__(self, text, key1, key2):
+        self.text = text
+        self.key1 = key1
+        self.key2 = key2
+
+    @staticmethod
+    def bigram_crypt(bigram, key1, key2):
+        bigram = bigram.lower()
+        key1 = key1.lower()
+        key2 = key2.lower()
+        alphabet = Foursquare.ALPHABET_NO_J.lower()
+        a, b = bigram[0], bigram[1]
+
+        pos_a = key1.index(a)
+        pos_b = key2.index(b)
+
+        row_a = pos_a // 5
+        row_b = pos_b // 5
+        col_a = pos_a % 5
+        col_b = pos_b % 5
+
+        row_c = row_a
+        row_d = row_b
+        col_c = col_b
+        col_d = col_a
+
+        pos_c = row_c * 5 + col_c
+        pos_d = row_d * 5 + col_d
+        return alphabet[pos_c] + alphabet[pos_d]
+
+    @property
+    def text_fitness(self):
+        def key_fitness(key):
+            return english_quadgram_fitness(
+                self.encipher(
+                    key1=key[0],
+                    key2=key[1]
+                )
+            )
+        return key_fitness
+
+    @staticmethod
+    def gen_new_key(key):
+        key_to_change = random.randint(0, 1)
+        new_key = list(key)
+        new_key[key_to_change] = Playfair.gen_new_key(new_key[key_to_change])
+        return new_key
+
+    @property
+    def best_key(self):
+        return simulated_annealing(
+            initial_key="".join(random.sample(Foursquare.ALPHABET_NO_J, k=25)),
+            fitness=self.text_fitness,
+            new_key=Foursquare.gen_new_key,
+            initial_temp=30,
+            count=20000,
+            max_length=10000,
+            stale=10000,
+            stale_fitness=-7600
+        )
+
+    def encipher(self, key1="", key2="", give_key=False, pretty=False):
+        if not key1:
+            if self.key1:
+                key1 = self.key1
+                key2 = self.key2
+            else:
+                raise NotImplementedError
+        text = letters(self.text).lower()
+        split_text = chunked(text, 2)
+        enciphered = "".join(
+            self.bigram_crypt(bigram, key1, key2)
+            for bigram in split_text
+        )
+        if pretty:
+            enciphered = match(self.text, enciphered)
+        if give_key:
+            return TextKey(enciphered, [key1, key2])
+        else:
+            return enciphered
+        pass
+    pass
+
+
 class Hill:
     MAX_SEARCH = 5
     ChiMat = collections.namedtuple('ChiMatrix', ['chi', 'matrix'])
@@ -1654,10 +1741,13 @@ class Challenge2018:
 
 
 if __name__ == "__main__":
-    x = letters(
-        cipher_texts.Test.straddle_encrypted,
-        keep=[str(i) for i in range(10)]
+    x = letters(cipher_texts.Test.foursquare_encrypted)
+    k_ey1 = "ETNYRKHSALVUPZQXWMFBGOIDC"
+    k_ey2 = "OWGXHEAIQZTDCRLVFPYKNBUMS"
+    y = Foursquare(
+        x,
+        key1=k_ey1,
+        key2=k_ey2
     )
-    y = Straddle(x)
-    print(y.encipher(give_key=True))
+    print(y.encipher())
     print("--- %s seconds ---" % (time.time() - start_time))
