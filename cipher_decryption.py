@@ -659,6 +659,34 @@ class DuoSub:
             return match(self.text, enciphered)
 
 
+class MultiSub:
+    def __init__(self, text, size, keep=[]):
+        self.text = text
+        self.size = size
+        self.keep = keep
+
+    @staticmethod
+    def multi_to_mono(text, size, keep=[]):
+        new_text = letters(text, keep=keep)
+        split_text = list(
+            new_text[i:i + size] for i in range(0, len(new_text), size)
+        )
+        print(split_text)
+        substitutions = {}
+        eng_index = 0
+        for ngram in split_text:
+            if ngram not in substitutions:
+                substitutions[ngram] = english_chars[eng_index]
+                eng_index += 1
+        return "".join(substitutions[ngram] for ngram in split_text)
+
+    def encipher(self):
+        best = MonoSub(
+            self.multi_to_mono(self.text, self.size, self.keep)
+        ).encipher(give_key=True)
+        return TextKey(best.text, best.key)
+
+
 class AutoKey:
     def __init__(self, text: str, key: str="", reset: int=None):
         self.text = text
@@ -1031,7 +1059,7 @@ class Hill:
             range(ENGLISH_LANG_LEN),
             repeat=self.size
         ):
-            #common = math.gcd(*row)
+            # common = math.gcd(*row)
             row = list(row)
             common = functools.reduce(math.gcd, row)
             if math.gcd(common, ENGLISH_LANG_LEN) != 1:
@@ -1192,6 +1220,41 @@ class Challenge2016:
         size=2,
         key=[[25, 22], [1, 23]]
     ).encipher()
+    temp_1_8B = letters(
+        cipher_texts.Challenge2016.encrypted_text_8B,
+        keep=["0", "1", "2"]
+    ).split("2")
+    solution_8B = MonoSub(
+        cipher_texts.Challenge2016.encrypted_trans_8B,
+        key={
+            'f': 'A',
+            'p': 'B',
+            't': 'C',
+            'i': 'D',
+            'h': 'E',
+            'b': 'F',
+            'k': 'G',
+            'm': 'H',
+            'a': 'I',
+            'x': 'J',
+            'q': 'K',
+            'r': 'L',
+            'o': 'M',
+            'j': 'N',
+            'd': 'O',
+            'u': 'P',
+            'w': 'Q',
+            'g': 'R',
+            'n': 'S',
+            'l': 'T',
+            'e': 'U',
+            'v': 'V',
+            's': 'W',
+            'y': 'X',
+            'c': 'Y',
+            'z': 'Z'
+        }
+    ).encipher()
 
 
 class Challenge2017:
@@ -1324,7 +1387,5 @@ class Challenge2018:
 
 
 if __name__ == "__main__":
-    x = cipher_texts.Challenge2016.encrypted_text_8A
-    y = ""
-    print(Challenge2016.solution_8A)
+    print(Challenge2016.solution_8B)
     print("--- %s seconds ---" % (time.time() - start_time))
