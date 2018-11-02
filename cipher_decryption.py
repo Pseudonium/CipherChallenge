@@ -795,10 +795,11 @@ class Straddle:
 
 
 class AutoKey:
-    def __init__(self, text: str, key: str="", reset: int=None):
+    def __init__(self, text: str, size, key: str="", reset: int=None):
         self.text = text
         self.key = key
         self.auto = not bool(key)
+        self.size = size
         if reset:
             self.reset = reset
 
@@ -828,12 +829,30 @@ class AutoKey:
         new_key[choice] = new_letter
         return "".join(new_key)
 
-    def encipher(self, key="", give_key=False):
+    @property
+    def best_key(self):
+        initial = "".join(
+            random.choice(english_chars)
+            for i in range(self.size)
+        )
+        return simulated_annealing(
+            initial_key=initial,
+            fitness=self.text_fitness,
+            new_key=AutoKey.gen_new_key,
+            initial_temp=30,
+            count=10000,
+            max_length=1000,
+            stale=5000,
+            stale_fitness=-20000,
+            threshold=-19000
+        )
+
+    def encipher(self, key="", give_key=False, pretty=False):
         if not key:
             if self.key:
                 key = self.key
             else:
-                raise NotImplementedError
+                key = self.best_key
         text = letters(self.text).lower()
         if hasattr(self, "reset"):
             split_text = list(
@@ -858,7 +877,13 @@ class AutoKey:
                 )
                 plain_index += 1
             final_plain += initial_plain
-        return match(self.text, final_plain)
+        enciphered = final_plain
+        if pretty:
+            enciphered = match(self.text, enciphered)
+        if give_key:
+            return TextKey(enciphered, key)
+        else:
+            return enciphered
 
 
 class ColTrans:
@@ -1721,6 +1746,7 @@ class Challenge2017:
         cipher_texts.Challenge2017.encrypted_text_8B,
         letters(AutoKey(
             word_reverse(cipher_texts.Challenge2017.encrypted_text_8B),
+            size=1,
             key="a",
             reset=12
         ).encipher())
@@ -1766,5 +1792,4 @@ class Challenge2018:
 
 
 if __name__ == "__main__":
-    print(Challenge2017.solution_8B)
     print("--- %s seconds ---" % (time.time() - start_time))
