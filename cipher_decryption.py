@@ -812,34 +812,36 @@ class AutoKey:
             )) % ENGLISH_LANG_LEN
         ]
 
-    def encipher(self, give_key=False):
-        if self.auto:
-            raise NotImplementedError
-        else:
-            text = letters(self.text).lower()
-            if hasattr(self, "reset"):
-                split_text = list(
-                    text[i:i + self.reset]
-                    for i in range(0, len(text), self.reset)
-                )
+    def encipher(self, key="", give_key=False):
+        if not key:
+            if self.key:
+                key = self.key
             else:
-                split_text = [text]
-            final_plain = ""
-            for split in split_text:
-                initial_plain = "".join(
-                    self.char_shift(cipher_char, key_char)
-                    for cipher_char, key_char
-                    in zip(split, self.key)
+                raise NotImplementedError
+        text = letters(self.text).lower()
+        if hasattr(self, "reset"):
+            split_text = list(
+                text[i:i + self.reset]
+                for i in range(0, len(text), self.reset)
+            )
+        else:
+            split_text = [text]
+        final_plain = ""
+        for split in split_text:
+            initial_plain = "".join(
+                self.char_shift(cipher_char, key_char)
+                for cipher_char, key_char
+                in zip(split, key)
+            )
+            start_index = len(initial_plain)
+            split = split[start_index:]
+            plain_index = 0
+            for char in split:
+                initial_plain += self.char_shift(
+                    char, initial_plain[plain_index]
                 )
-                start_index = len(initial_plain)
-                split = split[start_index:]
-                plain_index = 0
-                for char in split:
-                    initial_plain += self.char_shift(
-                        char, initial_plain[plain_index]
-                    )
-                    plain_index += 1
-                final_plain += initial_plain
+                plain_index += 1
+            final_plain += initial_plain
         return match(self.text, final_plain)
 
 
@@ -1748,4 +1750,5 @@ class Challenge2018:
 
 
 if __name__ == "__main__":
+    print(Challenge2017.solution_8B)
     print("--- %s seconds ---" % (time.time() - start_time))
