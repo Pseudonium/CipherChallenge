@@ -989,7 +989,6 @@ class Bifid:
 
 class Hill:
     MAX_SEARCH = 5
-    EXPECT_QUAD = "THAT"
     ChiMat = collections.namedtuple('ChiMatrix', ['chi', 'matrix'])
     FitMat = collections.namedtuple('FitnessMatrix', ['fitness', 'matrix'])
     TextFitKey = collections.namedtuple(
@@ -1188,6 +1187,11 @@ class Challenge2016:
         period=4,
         key="LIGOABCDEFHKMNPQRSTUVWXYZ".lower()
     ).encipher(pretty=True)
+    solution_8A = Hill(
+        cipher_texts.Challenge2016.encrypted_text_8A,
+        size=2,
+        key=[[25, 22], [1, 23]]
+    ).encipher()
 
 
 class Challenge2017:
@@ -1321,19 +1325,6 @@ class Challenge2018:
 
 if __name__ == "__main__":
     x = cipher_texts.Challenge2016.encrypted_text_8A
-    y = Hill(
-        x,
-        # size=3,
-        #key=[[25, 22], [1, 23]]
-    )
-    print(x)
-    z = np.matrix(
-        [
-            [25, 22],
-            [1, 23]
-        ]
-    )
-    # print(y.matrix_text)
-    print(y.encipher(give_key=True))
-    print(len(letters(x)))
+    y = ""
+    print(Challenge2016.solution_8A)
     print("--- %s seconds ---" % (time.time() - start_time))
