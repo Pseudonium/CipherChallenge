@@ -1015,6 +1015,46 @@ class Bifid:
             return enciphered
 
 
+class Playfair:
+    def __init__(self, text: str, key: str=""):
+        self.text = text
+        self.key = key
+
+    @staticmethod
+    def bigram_crypt(bigram, key):
+        if bigram[0] == bigram[1]:
+            raise ValueError("Can't encrypt with same.")
+        pos_0 = key.index(bigram[0])
+        pos_1 = key.index(bigram[1])
+
+        row_0 = pos_0 // 5
+        col_0 = pos_0 % 5
+        row_1 = pos_1 // 5
+        col_1 = pos_1 % 5
+
+        same_rows = row_0 == row_1
+        same_cols = col_0 == col_1
+
+        if same_rows:
+            row_2 = row_0
+            row_3 = row_0
+            col_2 = col_0 - 1
+            col_3 = col_1 - 1
+        elif same_cols:
+            row_2 = row_0 - 1
+            row_3 = row_1 - 1
+            col_2 = col_0
+            col_3 = col_0
+        else:
+            row_2 = row_0
+            row_3 = row_1
+            col_2 = col_1
+            col_3 = col_0
+        pos_2 = row_2 * 5 + col_2
+        pos_3 = row_3 * 5 + col_3
+        return key[pos_2] + key[pos_3]
+
+
 class Hill:
     MAX_SEARCH = 5
     ChiMat = collections.namedtuple('ChiMatrix', ['chi', 'matrix'])
