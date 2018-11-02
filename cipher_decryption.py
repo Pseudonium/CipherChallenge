@@ -988,16 +988,21 @@ class Bifid:
 
 
 class Hill:
+    MAX_SEARCH = 5
     EXPECT_QUAD = "THAT"
     ChiMat = collections.namedtuple('ChiMatrix', ['chi', 'matrix'])
     FitMat = collections.namedtuple('FitnessMatrix', ['fitness', 'matrix'])
+    TextFitKey = collections.namedtuple(
+        'TextFitnessKey',
+        ['text', 'fitness', 'key'])
 
-    def __init__(self, text, size, key: list=[]):
+    def __init__(self, text, size: int=1, key: list=[]):
         self.text = text
-        self.size = size
         if key:
             top, bottom = key
             self.key = np.matrix(key)
+        if size != 1:
+            self.size = size
             self.auto = False
         else:
             self.auto = True
@@ -1025,9 +1030,11 @@ class Hill:
         possible_matrices = list()
         for row in itertools.product(
             range(ENGLISH_LANG_LEN),
-            repeat=2
+            repeat=self.size
         ):
-            common = math.gcd(*row)
+            #common = math.gcd(*row)
+            row = list(row)
+            common = functools.reduce(math.gcd, row)
             if math.gcd(common, ENGLISH_LANG_LEN) != 1:
                 continue
             possible_matrix = np.matrix([*row])
@@ -1077,6 +1084,28 @@ class Hill:
         if key is None:
             if hasattr(self, 'key'):
                 key = self.key
+            elif self.auto:
+                possible_texts = list()
+                for possible_size in range(2, Hill.MAX_SEARCH):
+                    if len(letters(self.text).lower()) % possible_size != 0:
+                        continue
+                    possible = Hill(
+                        self.text,
+                        size=possible_size
+                    ).encipher(give_key=True)
+                    possible_texts.append(
+                        Hill.TextFitKey(
+                            text=possible.text,
+                            fitness=english_quadgram_fitness(possible.text),
+                            key=possible.key
+                        )
+                    )
+                key = sorted(
+                    possible_texts,
+                    key=lambda elem: elem.fitness,
+                    reverse=True
+                )[0].key
+                self.size = len(key)
             else:
                 key = self.best_matrix
         encoded = key * self.matrix_text
@@ -1294,7 +1323,7 @@ if __name__ == "__main__":
     x = cipher_texts.Challenge2016.encrypted_text_8A
     y = Hill(
         x,
-        size=2,
+        # size=3,
         #key=[[25, 22], [1, 23]]
     )
     print(x)
@@ -1304,6 +1333,7 @@ if __name__ == "__main__":
             [1, 23]
         ]
     )
-    # print(y.matrix_text.transpose())
+    # print(y.matrix_text)
     print(y.encipher(give_key=True))
+    print(len(letters(x)))
     print("--- %s seconds ---" % (time.time() - start_time))
