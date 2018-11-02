@@ -60,6 +60,13 @@ def pad_to_length(string: str, length: int, fillvalue=" "):
         return pad_to_length(new_string, length, fillvalue=fillvalue)
 
 
+def chunked(iterable, chunk_length):
+    return (
+        iterable[i: i + chunk_length]
+        for i in range(0, len(iterable), chunk_length)
+    )
+
+
 def simulated_annealing(
     initial_key,
     fitness,
@@ -1022,10 +1029,11 @@ class Playfair:
 
     @staticmethod
     def bigram_crypt(bigram, key):
+        low_key = key.lower()
         if bigram[0] == bigram[1]:
             raise ValueError("Can't encrypt with same.")
-        pos_0 = key.index(bigram[0])
-        pos_1 = key.index(bigram[1])
+        pos_0 = low_key.index(bigram[0])
+        pos_1 = low_key.index(bigram[1])
 
         row_0 = pos_0 // 5
         col_0 = pos_0 % 5
@@ -1038,11 +1046,11 @@ class Playfair:
         if same_rows:
             row_2 = row_0
             row_3 = row_0
-            col_2 = col_0 - 1
-            col_3 = col_1 - 1
+            col_2 = (col_0 - 1) % 5
+            col_3 = (col_1 - 1) % 5
         elif same_cols:
-            row_2 = row_0 - 1
-            row_3 = row_1 - 1
+            row_2 = (row_0 - 1) % 5
+            row_3 = (row_1 - 1) % 5
             col_2 = col_0
             col_3 = col_0
         else:
@@ -1053,6 +1061,17 @@ class Playfair:
         pos_2 = row_2 * 5 + col_2
         pos_3 = row_3 * 5 + col_3
         return key[pos_2] + key[pos_3]
+
+    @staticmethod
+    def normalise(text):
+        final_text = ""
+        for index, char in enumerate(text):
+            if not (
+                char.lower() == "x" and text[index - 1] == text[index + 1]
+            ):
+                final_text += char
+        return final_text
+        pass
 
 
 class Hill:
@@ -1427,5 +1446,15 @@ class Challenge2018:
 
 
 if __name__ == "__main__":
-    print(Challenge2016.solution_8B)
+    x = cipher_texts.Test.playfar_encrypted.lower()
+    y = Playfair(
+        x,
+        key="LOYATBCDEFGHIKMNPQRSUVWXZ"
+    )
+    z = "".join(
+        y.bigram_crypt(bigram, key="LOYATBCDEFGHIKMNPQRSUVWXZ")
+        for bigram in chunked(x, 2)
+    )
+    print(z)
+    print(Playfair.normalise(z))
     print("--- %s seconds ---" % (time.time() - start_time))
