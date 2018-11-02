@@ -6,7 +6,7 @@ import functools
 import cipher_texts
 import pdb
 import random
-
+import numpy as np
 start_time = time.time()
 # -----------------------
 # -----------------------
@@ -990,80 +990,28 @@ class Bifid:
 
 class Hill:
     EXPECT_QUAD = "THAT"
-    Top = collections.namedtuple('TopRow', ['a', 'b'])
-    Bottom = collections.namedtuple('BottomRow', ['c', 'd'])
-    Matrix = collections.namedtuple('Matrix', ['top', 'bottom'])
-    Vector = collections.namedtuple('Vector', ['top', 'bottom'])
 
-    def __init__(self, text, key: tuple=()):
+    def __init__(self, text, key: list=[]):
         self.text = text
         if key:
             top, bottom = key
-            self.key = Hill.Matrix(
-                top=Hill.Top(a=top[0], b=top[1]),
-                bottom=Hill.Bottom(c=bottom[0], d=bottom[1])
-            )
+            self.key = np.matrix(key)
             self.auto = False
         else:
             self.auto = True
 
-    @staticmethod
-    def bigram_crypt(bigram, key):
-        start = Hill.Vector(
-            top=english_chars.index(bigram[0]),
-            bottom=english_chars.index(bigram[1])
-        )
-        crypted = Hill.Vector(
-            top=(
-                key.top.a * start.top + key.top.b * start.bottom
-            ) % ENGLISH_LANG_LEN,
-            bottom=(
-                key.bottom.c * start.top + key.bottom.d * start.bottom
-            ) % ENGLISH_LANG_LEN
-        )
-        return english_chars[crypted.top] + english_chars[crypted.bottom]
-
-    def mono_crypt(bigram, key, top: bool):
-        start = Hill.Vector(
-            top=english_chars.index(bigram[0]),
-            bottom=english_chars.index(bigram[1])
-        )
-        if top:
-            crypted = (
-                key.top.a * start.top + key.top.b * start.bottom
-            ) % ENGLISH_LANG_LEN
-        else:
-            crypted = (
-                key.bottom.c * start.top + key.bottom.d * start.bottom
-            ) % ENGLISH_LANG_LEN
-        return english_chars[crypted]
-
-    def best_tops(self):
+    @property
+    def matrix_text(self):
         text = letters(self.text).lower()
-        top_text = list(
-            text[::]
-        )
-        pass
-
-    def encipher(self, give_key=False):
-        text = letters(self.text).lower()
-        if self.auto:
-            quad_split = (
-                text[i: i + 4]
-                for i in range(0, len(text), 4)
-            )
         split_text = (
             text[i: i + 2]
             for i in range(0, len(text), 2)
         )
-        enciphered = "".join(
-            self.bigram_crypt(split, self.key)
-            for split in split_text
-        )
-        if give_key:
-            return TextKey(match(self.text, enciphered), self.key)
-        else:
-            return match(self.text, enciphered)
+        return np.matrix(
+            list(
+                [english_chars.index(split[0]), english_chars.index(split[1])]
+                for split in split_text
+            )).transpose()
 
 
 class Challenge2016:
@@ -1264,11 +1212,8 @@ class Challenge2018:
 
 
 if __name__ == "__main__":
-    x = cipher_texts.Challenge2018.encrypted_text_4B
-    y = ""
-    # print(Challenge2018.solution_3B)
-    mat_top = Hill.Top(25, 22)
-    mat_bot = Hill.Bottom(1, 23)
-    mat_ful = Hill.Matrix(mat_top, mat_bot)
-    z = letters(x).lower()
+    x = cipher_texts.Challenge2016.encrypted_text_8A
+    y = Hill(x, key=[[25, 22], [1, 23]])
+    print(x)
+    print(y.matrix_text)
     print("--- %s seconds ---" % (time.time() - start_time))
