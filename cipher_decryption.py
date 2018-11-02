@@ -183,7 +183,6 @@ english_4gram_expected_dict = dict()
 def english_quadgram_fitness(text: str) -> float:
     """Return the fitness of a text, based on quadgram count."""
     if not english_4gram_expected_dict:
-        print("Needed to make it.")
         with open("english_quadgrams.txt") as f:
             total = 0
             for line in f:
@@ -990,9 +989,12 @@ class Bifid:
 
 class Hill:
     EXPECT_QUAD = "THAT"
+    ChiMat = collections.namedtuple('ChiMatrix', ['chi', 'matrix'])
+    FitMat = collections.namedtuple('FitnessMatrix', ['fitness', 'matrix'])
 
     def __init__(self, text, key: list=[]):
         self.text = text
+        self.size = 2
         if key:
             top, bottom = key
             self.key = np.matrix(key)
@@ -1011,7 +1013,82 @@ class Hill:
             list(
                 [english_chars.index(split[0]), english_chars.index(split[1])]
                 for split in split_text
-            )).transpose()
+            )
+        ).transpose()
+
+    @property
+    def best_rows(self):
+        text = letters(self.text).lower()
+        possible_matrices = list()
+        for a, b in itertools.product(
+            range(ENGLISH_LANG_LEN),
+            repeat=2
+        ):
+            common = math.gcd(a, b)
+            if math.gcd(common, ENGLISH_LANG_LEN) != 1:
+                continue
+            possible_matrix = np.matrix([a, b])
+            possible_text = "".join(
+                english_chars[value % ENGLISH_LANG_LEN]
+                for value in (
+                    possible_matrix * self.matrix_text
+                ).tolist()[0]
+            )
+            possible_matrices.append(
+                Hill.ChiMat(
+                    chi=english_1gram_chi(possible_text),
+                    matrix=possible_matrix
+                )
+            )
+        return list(
+            best.matrix
+            for best in sorted(
+                possible_matrices,
+                key=lambda elem: elem.chi
+            )[:2]
+        )
+
+    @property
+    def best_matrix(self):
+        best_rows = (
+            matrix.tolist()[0]
+            for matrix in self.best_rows
+        )
+        possible_texts = list()
+        for item in itertools.permutations(best_rows, 2):
+            possible_matrix = np.matrix(list(item))
+            possible_text = self.encipher(key=possible_matrix)
+            possible_texts.append(
+                Hill.FitMat(
+                    fitness=english_quadgram_fitness(possible_text),
+                    matrix=possible_matrix
+                )
+            )
+        return sorted(
+            possible_texts,
+            key=lambda elem: elem.fitness,
+            reverse=True
+        )[0].matrix
+
+    def encipher(self, key=None, give_key=False):
+        if key is None:
+            if hasattr(self, 'key'):
+                key = self.key
+            else:
+                key = self.best_matrix
+        encoded = key * self.matrix_text
+        enciphered = "".join(
+            english_chars[a % ENGLISH_LANG_LEN] +
+            english_chars[b % ENGLISH_LANG_LEN]
+            for a, b in zip(
+                encoded[0].tolist()[0],
+                encoded[1].tolist()[0]
+            )
+        )
+        if give_key:
+            return TextKey(match(self.text, enciphered), key)
+        else:
+            return match(self.text, enciphered)
 
 
 class Challenge2016:
@@ -1213,7 +1290,10 @@ class Challenge2018:
 
 if __name__ == "__main__":
     x = cipher_texts.Challenge2016.encrypted_text_8A
-    y = Hill(x, key=[[25, 22], [1, 23]])
+    y = Hill(
+        x,
+        #key=[[25, 22], [1, 23]]
+    )
     print(x)
-    print(y.matrix_text)
+    print(y.encipher(give_key=True))
     print("--- %s seconds ---" % (time.time() - start_time))
