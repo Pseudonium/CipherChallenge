@@ -992,9 +992,9 @@ class Hill:
     ChiMat = collections.namedtuple('ChiMatrix', ['chi', 'matrix'])
     FitMat = collections.namedtuple('FitnessMatrix', ['fitness', 'matrix'])
 
-    def __init__(self, text, key: list=[]):
+    def __init__(self, text, size, key: list=[]):
         self.text = text
-        self.size = 2
+        self.size = size
         if key:
             top, bottom = key
             self.key = np.matrix(key)
@@ -1006,12 +1006,15 @@ class Hill:
     def matrix_text(self):
         text = letters(self.text).lower()
         split_text = (
-            text[i: i + 2]
-            for i in range(0, len(text), 2)
+            text[i: i + self.size]
+            for i in range(0, len(text), self.size)
         )
         return np.matrix(
             list(
-                [english_chars.index(split[0]), english_chars.index(split[1])]
+                list(
+                    english_chars.index(char)
+                    for char in split
+                )
                 for split in split_text
             )
         ).transpose()
@@ -1020,14 +1023,14 @@ class Hill:
     def best_rows(self):
         text = letters(self.text).lower()
         possible_matrices = list()
-        for a, b in itertools.product(
+        for row in itertools.product(
             range(ENGLISH_LANG_LEN),
             repeat=2
         ):
-            common = math.gcd(a, b)
+            common = math.gcd(*row)
             if math.gcd(common, ENGLISH_LANG_LEN) != 1:
                 continue
-            possible_matrix = np.matrix([a, b])
+            possible_matrix = np.matrix([*row])
             possible_text = "".join(
                 english_chars[value % ENGLISH_LANG_LEN]
                 for value in (
@@ -1045,7 +1048,7 @@ class Hill:
             for best in sorted(
                 possible_matrices,
                 key=lambda elem: elem.chi
-            )[:2]
+            )[:self.size]
         )
 
     @property
@@ -1055,7 +1058,7 @@ class Hill:
             for matrix in self.best_rows
         )
         possible_texts = list()
-        for item in itertools.permutations(best_rows, 2):
+        for item in itertools.permutations(best_rows, self.size):
             possible_matrix = np.matrix(list(item))
             possible_text = self.encipher(key=possible_matrix)
             possible_texts.append(
@@ -1078,12 +1081,11 @@ class Hill:
                 key = self.best_matrix
         encoded = key * self.matrix_text
         enciphered = "".join(
-            english_chars[a % ENGLISH_LANG_LEN] +
-            english_chars[b % ENGLISH_LANG_LEN]
-            for a, b in zip(
-                encoded[0].tolist()[0],
-                encoded[1].tolist()[0]
+            "".join(
+                english_chars[i % ENGLISH_LANG_LEN]
+                for i in row.tolist()[0]
             )
+            for row in encoded.transpose()
         )
         if give_key:
             return TextKey(match(self.text, enciphered), key)
@@ -1292,8 +1294,16 @@ if __name__ == "__main__":
     x = cipher_texts.Challenge2016.encrypted_text_8A
     y = Hill(
         x,
+        size=2,
         #key=[[25, 22], [1, 23]]
     )
     print(x)
+    z = np.matrix(
+        [
+            [25, 22],
+            [1, 23]
+        ]
+    )
+    # print(y.matrix_text.transpose())
     print(y.encipher(give_key=True))
     print("--- %s seconds ---" % (time.time() - start_time))
