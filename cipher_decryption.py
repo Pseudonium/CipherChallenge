@@ -812,6 +812,22 @@ class AutoKey:
             )) % ENGLISH_LANG_LEN
         ]
 
+    @property
+    def text_fitness(self):
+        def key_fitness(key):
+            return english_quadgram_fitness(
+                self.encipher(key=key)
+            )
+        return key_fitness
+
+    @staticmethod
+    def gen_new_key(key):
+        choice = random.randrange(len(key))
+        new_letter = english_chars[random.randrange(26)]
+        new_key = list(key)
+        new_key[choice] = new_letter
+        return "".join(new_key)
+
     def encipher(self, key="", give_key=False):
         if not key:
             if self.key:
