@@ -771,7 +771,6 @@ class Straddle:
                     ENGLISH_UPPER_CODEX > codex(possible_text)
                     and codex(possible_text) > ENGLISH_LOWER_CODEX
                 ):
-                    print("Found one! ", blanks)
                     possible_keys.append(
                         Straddle.TextKeyCodex(
                             text=possible_text,
