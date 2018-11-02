@@ -73,17 +73,35 @@ def simulated_annealing(
     new_key,
     initial_temp=50,
     count=10000,
-    max_length=1000
+    max_length=1000,
+    stale=6000,
+    stale_fitness=-8000,
+    threshold=-6000
 ):
     temp_step = initial_temp / count
     temp = initial_temp
     current_key = initial_key
     same_key = 0
+    best_fitness = -100000
     for c in range(count):
         if same_key == max_length:
             break
         print(c)
+        if c == stale and best_fitness < stale_fitness:
+            print("Stale! Restarting.")
+            return simulated_annealing(
+                initial_key=best_key,
+                fitness=fitness,
+                new_key=new_key,
+                initial_temp=initial_temp,
+                count=count,
+                max_length=max_length,
+                stale=stale,
+                stale_fitness=stale_fitness,
+                threshold=threshold
+            )
         parent_fitness = fitness(current_key)
+        print("Fitness: ", parent_fitness)
         child_key = new_key(current_key)
         child_fitness = fitness(child_key)
         dF = child_fitness - parent_fitness
@@ -98,6 +116,22 @@ def simulated_annealing(
         else:
             same_key += 1
         temp -= temp_step
+        if child_fitness > best_fitness:
+            best_key = child_key
+            best_fitness = child_fitness
+    if best_fitness < threshold:
+        print("Stale! Restarting.")
+        return simulated_annealing(
+            initial_key=best_key,
+            fitness=fitness,
+            new_key=new_key,
+            initial_temp=initial_temp,
+            count=count,
+            max_length=max_length,
+            stale=stale,
+            stale_fitness=stale_fitness,
+            threshold=threshold
+        )
     return current_key
 # -----------------------
 # -----------------------
@@ -1023,6 +1057,8 @@ class Bifid:
 
 
 class Playfair:
+    ALPHABET_NO_J = "ABCDEFGHIKLMNOPQRSTUVWXYZ"
+
     def __init__(self, text: str, key: str=""):
         self.text = text
         self.key = key
@@ -1030,6 +1066,7 @@ class Playfair:
     @staticmethod
     def bigram_crypt(bigram, key):
         low_key = key.lower()
+        bigram = bigram.lower()
         if bigram[0] == bigram[1]:
             raise ValueError("Can't encrypt with same.")
         pos_0 = low_key.index(bigram[0])
@@ -1071,7 +1108,112 @@ class Playfair:
             ):
                 final_text += char
         return final_text
-        pass
+
+    @property
+    def text_fitness(self):
+        def key_fitness(key):
+            return english_quadgram_fitness(
+                self.encipher(key=key)
+            )
+        return key_fitness
+
+    @staticmethod
+    def exchange_letters(key):
+        (swap_1, swap_2) = tuple(random.choices(range(25), k=2))
+        new_key = list(key)
+        new_key[swap_1], new_key[swap_2] = new_key[swap_2], new_key[swap_1]
+        return "".join(new_key)
+
+    @staticmethod
+    def exchange_rows(key):
+        (swap_1, swap_2) = tuple(random.choices(range(5), k=2))
+        new_key = list(chunked(key, 5))
+        new_key[swap_1], new_key[swap_2] = new_key[swap_2], new_key[swap_1]
+        return "".join(new_key)
+
+    @staticmethod
+    def flip_top_bottom(key):
+        new_key = list(chunked(key, 5))
+        return "".join(reversed(new_key))
+
+    @staticmethod
+    def exchange_cols(key):
+        (swap_1, swap_2) = tuple(random.choices(range(5), k=2))
+        new_key = list(
+            key[offset::5]
+            for offset in range(5)
+        )
+        new_key[swap_1], new_key[swap_2] = new_key[swap_2], new_key[swap_1]
+        combined = "".join(new_key)
+        return "".join(
+            combined[offset::5]
+            for offset in range(5)
+        )
+
+    @staticmethod
+    def flip_left_right(key):
+        new_key = list(
+            key[offset::5]
+            for offset in range(5)
+        )
+        combined = "".join(reversed(new_key))
+        return "".join(
+            combined[offset::5]
+            for offset in range(5)
+        )
+
+    @staticmethod
+    def key_reverse(key):
+        return "".join(reversed(key))
+
+    @staticmethod
+    def gen_new_key(key):
+        choice = random.randint(0, 8)
+        if choice == 8:
+            choice = random.randint(1, 5)
+        else:
+            choice = 0
+        transformations = {
+            0: Playfair.exchange_letters,
+            1: Playfair.exchange_rows,
+            2: Playfair.exchange_cols,
+            3: Playfair.flip_left_right,
+            4: Playfair.flip_top_bottom,
+            5: Playfair.key_reverse
+        }
+        return transformations[choice](key)
+
+    @property
+    def best_key(self):
+        return simulated_annealing(
+            initial_key="".join(random.sample(Playfair.ALPHABET_NO_J, k=25)),
+            fitness=self.text_fitness,
+            new_key=Playfair.gen_new_key,
+            initial_temp=30,
+            count=20000,
+            max_length=10000,
+            stale=10000,
+            stale_fitness=-7600
+        )
+
+    def encipher(self, key: str="", give_key=False, pretty=False):
+        if not key:
+            if self.key:
+                key = self.key
+            else:
+                key = self.best_key
+        text = letters(self.text).lower()
+        split_text = chunked(text, 2)
+        enciphered = "".join(
+            self.bigram_crypt(bigram, key)
+            for bigram in split_text
+        )
+        if pretty:
+            enciphered = Playfair.normalise(enciphered)
+        if give_key:
+            return TextKey(match(self.text, enciphered), key)
+        else:
+            return match(self.text, enciphered)
 
 
 class Hill:
@@ -1446,15 +1588,16 @@ class Challenge2018:
 
 
 if __name__ == "__main__":
-    x = cipher_texts.Test.playfar_encrypted.lower()
+    x = cipher_texts.Test.playfar_encrypted
     y = Playfair(
         x,
-        key="LOYATBCDEFGHIKMNPQRSUVWXZ"
+        # key="LOYATBCDEFGHIKMNPQRSUVWXZ"
     )
     z = "".join(
         y.bigram_crypt(bigram, key="LOYATBCDEFGHIKMNPQRSUVWXZ")
         for bigram in chunked(x, 2)
     )
-    print(z)
-    print(Playfair.normalise(z))
+    # print(z)
+    # print(Playfair.normalise(z))
+    print(y.encipher())
     print("--- %s seconds ---" % (time.time() - start_time))
