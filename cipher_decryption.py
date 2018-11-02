@@ -1275,7 +1275,7 @@ class Challenge2018:
     ).encipher()
     solution_3B = MonoSub(
         cipher_texts.Challenge2018.encrypted_text_3B,
-        key="loyalot",
+        key="loyalty",
         keyword=True
     ).encipher()
     solution_4A = MonoSub(
@@ -1283,39 +1283,15 @@ class Challenge2018:
         key="lidar",
         keyword=True
     ).encipher()
+    solution_4B = MonoSub(
+        cipher_texts.Challenge2018.encrypted_text_4B,
+        key="realpoitk",
+        keyword=True
+    ).encipher()
 
 
 if __name__ == "__main__":
     x = cipher_texts.Challenge2018.encrypted_text_4B
-    y = MonoSub(x, key="realpoitk", keyword=True)
-    print(y.encipher())
-    key = {
-        'r': 'A',
-        'e': 'B',
-        'a': 'C',
-        'l': 'D',
-        'p': 'E',
-        'o': 'F',
-        'i': 'G',
-        't': 'H',
-        'k': 'I',
-        'u': 'J',
-        'v': 'K',
-        'w': 'L',
-        'x': 'M',
-        'y': 'N',
-        'z': 'O',
-        'b': 'P',
-        's': 'Q',
-        'd': 'R',
-        'f': 'S',
-        'g': 'T',
-        'h': 'U',
-        'j': 'V',
-        'm': 'W',
-        'n': 'X',
-        'q': 'Y',
-        'c': 'Z'
-    }
-    print("".join(iter(key)))
+    y = ""
+    print(Challenge2018.solution_3B)
     print("--- %s seconds ---" % (time.time() - start_time))
