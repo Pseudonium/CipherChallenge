@@ -6,7 +6,7 @@ import functools
 import cipher_texts
 import pdb
 import random
-
+import numpy as np
 start_time = time.time()
 # -----------------------
 # -----------------------
@@ -183,7 +183,6 @@ english_4gram_expected_dict = dict()
 def english_quadgram_fitness(text: str) -> float:
     """Return the fitness of a text, based on quadgram count."""
     if not english_4gram_expected_dict:
-        print("Needed to make it.")
         with open("english_quadgrams.txt") as f:
             total = 0
             for line in f:
@@ -989,106 +988,135 @@ class Bifid:
 
 
 class Hill:
-    EXPECT_QUAD = "THAT"
-    Top = collections.namedtuple('TopRow', ['a', 'b'])
-    Bottom = collections.namedtuple('BottomRow', ['c', 'd'])
-    Matrix = collections.namedtuple('Matrix', ['top', 'bottom'])
-    Vector = collections.namedtuple('Vector', ['top', 'bottom'])
+    MAX_SEARCH = 5
+    ChiMat = collections.namedtuple('ChiMatrix', ['chi', 'matrix'])
+    FitMat = collections.namedtuple('FitnessMatrix', ['fitness', 'matrix'])
+    TextFitKey = collections.namedtuple(
+        'TextFitnessKey',
+        ['text', 'fitness', 'key'])
 
-    def __init__(self, text, key: tuple=()):
+    def __init__(self, text, size: int=1, key: list=[]):
         self.text = text
         if key:
             top, bottom = key
-            self.key = Hill.Matrix(
-                top=Hill.Top(a=top[0], b=top[1]),
-                bottom=Hill.Bottom(c=bottom[0], d=bottom[1])
-            )
+            self.key = np.matrix(key)
+        if size != 1:
+            self.size = size
             self.auto = False
         else:
             self.auto = True
 
-    @staticmethod
-    def bigram_crypt(bigram, key):
-        start = Hill.Vector(
-            top=english_chars.index(bigram[0]),
-            bottom=english_chars.index(bigram[1])
-        )
-        crypted = Hill.Vector(
-            top=(
-                key.top.a * start.top + key.top.b * start.bottom
-            ) % ENGLISH_LANG_LEN,
-            bottom=(
-                key.bottom.c * start.top + key.bottom.d * start.bottom
-            ) % ENGLISH_LANG_LEN
-        )
-        return english_chars[crypted.top] + english_chars[crypted.bottom]
-
-    @staticmethod
-    def find_matrix(quadgram):
-        """
-        Trying to solve this matrix equation:
-        ((a, b),  (e   (19
-        (c, d)) * f) = 7)
-        ((a, b),  (g   (0
-        (c, d)) * h) = 19)
-        with 19, 7, 0, 19 being the indices of "THAT".
-        Replace 19, 7, 0, 19 with i, j, k, l
-        Then, have to solve these equations:
-        ae + bf = i
-        ag + bh = k
-        ce + df = j
-        cg + dh = l
-        j being zero is the default case, so it's tricky for inverses.
-        However, that is solvable, and gives the following formulas:
-        (only work for "THAT", for now)
-        a = i * inv(e - f*g*inv(h))
-        b = (i - ae)*inv(f)
-        c = l*inv(g + j*h*inv(f) - e*h*inv(f))
-        d = (j - ec)*inv(f)
-        """
-        ell = ENGLISH_LANG_LEN
-        (i, j, k, l) = tuple(
-            english_chars.index(char)
-            for char in Hill.EXPECT_QUAD.lower()
-        )
-        (e, f, g, h) = tuple(english_chars.index(char) for char in quadgram)
-        a = (
-            i * mod_inverse(
-                e - f*g*mod_inverse(h, ell), ell
-            )
-        ) % ENGLISH_LANG_LEN
-        b = (
-            (i - a*e)*mod_inverse(f, ell)
-        ) % ENGLISH_LANG_LEN
-        c = (
-            l * mod_inverse(
-                g + j*h*mod_inverse(f, ell) - e*h*mod_inverse(f, ell), ell
-            )
-        ) % ENGLISH_LANG_LEN
-        d = (
-            (j - e*c)*mod_inverse(f, ell)
-        )
-        top = Hill.Top(a, b)
-        bottom = Hill.Bottom(c, d)
-        return Hill.Matrix(top, bottom)
-
-    def encipher(self, give_key=False):
+    @property
+    def matrix_text(self):
         text = letters(self.text).lower()
-        if self.auto:
-            quad_split = (
-                text[i: i + 4]
-                for i in range(0, len(text), 4)
-            )
         split_text = (
-            text[i: i + 2]
-            for i in range(0, len(text), 2)
+            text[i: i + self.size]
+            for i in range(0, len(text), self.size)
         )
+        return np.matrix(
+            list(
+                list(
+                    english_chars.index(char)
+                    for char in split
+                )
+                for split in split_text
+            )
+        ).transpose()
+
+    @property
+    def best_rows(self):
+        text = letters(self.text).lower()
+        possible_matrices = list()
+        for row in itertools.product(
+            range(ENGLISH_LANG_LEN),
+            repeat=self.size
+        ):
+            #common = math.gcd(*row)
+            row = list(row)
+            common = functools.reduce(math.gcd, row)
+            if math.gcd(common, ENGLISH_LANG_LEN) != 1:
+                continue
+            possible_matrix = np.matrix([*row])
+            possible_text = "".join(
+                english_chars[value % ENGLISH_LANG_LEN]
+                for value in (
+                    possible_matrix * self.matrix_text
+                ).tolist()[0]
+            )
+            possible_matrices.append(
+                Hill.ChiMat(
+                    chi=english_1gram_chi(possible_text),
+                    matrix=possible_matrix
+                )
+            )
+        return list(
+            best.matrix
+            for best in sorted(
+                possible_matrices,
+                key=lambda elem: elem.chi
+            )[:self.size]
+        )
+
+    @property
+    def best_matrix(self):
+        best_rows = (
+            matrix.tolist()[0]
+            for matrix in self.best_rows
+        )
+        possible_texts = list()
+        for item in itertools.permutations(best_rows, self.size):
+            possible_matrix = np.matrix(list(item))
+            possible_text = self.encipher(key=possible_matrix)
+            possible_texts.append(
+                Hill.FitMat(
+                    fitness=english_quadgram_fitness(possible_text),
+                    matrix=possible_matrix
+                )
+            )
+        return sorted(
+            possible_texts,
+            key=lambda elem: elem.fitness,
+            reverse=True
+        )[0].matrix
+
+    def encipher(self, key=None, give_key=False):
+        if key is None:
+            if hasattr(self, 'key'):
+                key = self.key
+            elif self.auto:
+                possible_texts = list()
+                for possible_size in range(2, Hill.MAX_SEARCH):
+                    if len(letters(self.text).lower()) % possible_size != 0:
+                        continue
+                    possible = Hill(
+                        self.text,
+                        size=possible_size
+                    ).encipher(give_key=True)
+                    possible_texts.append(
+                        Hill.TextFitKey(
+                            text=possible.text,
+                            fitness=english_quadgram_fitness(possible.text),
+                            key=possible.key
+                        )
+                    )
+                key = sorted(
+                    possible_texts,
+                    key=lambda elem: elem.fitness,
+                    reverse=True
+                )[0].key
+                self.size = len(key)
+            else:
+                key = self.best_matrix
+        encoded = key * self.matrix_text
         enciphered = "".join(
-            self.bigram_crypt(split, self.key)
-            for split in split_text
+            "".join(
+                english_chars[i % ENGLISH_LANG_LEN]
+                for i in row.tolist()[0]
+            )
+            for row in encoded.transpose()
         )
         if give_key:
-            return TextKey(match(self.text, enciphered), self.key)
+            return TextKey(match(self.text, enciphered), key)
         else:
             return match(self.text, enciphered)
 
@@ -1159,6 +1187,11 @@ class Challenge2016:
         period=4,
         key="LIGOABCDEFHKMNPQRSTUVWXYZ".lower()
     ).encipher(pretty=True)
+    solution_8A = Hill(
+        cipher_texts.Challenge2016.encrypted_text_8A,
+        size=2,
+        key=[[25, 22], [1, 23]]
+    ).encipher()
 
 
 class Challenge2017:
@@ -1291,7 +1324,7 @@ class Challenge2018:
 
 
 if __name__ == "__main__":
-    x = cipher_texts.Challenge2018.encrypted_text_4B
+    x = cipher_texts.Challenge2016.encrypted_text_8A
     y = ""
-    print(Challenge2018.solution_3B)
+    print(Challenge2016.solution_8A)
     print("--- %s seconds ---" % (time.time() - start_time))
