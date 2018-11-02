@@ -1023,54 +1023,27 @@ class Hill:
         )
         return english_chars[crypted.top] + english_chars[crypted.bottom]
 
-    @staticmethod
-    def find_matrix(quadgram):
-        """
-        Trying to solve this matrix equation:
-        ((a, b),  (e   (19
-        (c, d)) * f) = 7)
-        ((a, b),  (g   (0
-        (c, d)) * h) = 19)
-        with 19, 7, 0, 19 being the indices of "THAT".
-        Replace 19, 7, 0, 19 with i, j, k, l
-        Then, have to solve these equations:
-        ae + bf = i
-        ag + bh = k
-        ce + df = j
-        cg + dh = l
-        j being zero is the default case, so it's tricky for inverses.
-        However, that is solvable, and gives the following formulas:
-        (only work for "THAT", for now)
-        a = i * inv(e - f*g*inv(h))
-        b = (i - ae)*inv(f)
-        c = l*inv(g + j*h*inv(f) - e*h*inv(f))
-        d = (j - ec)*inv(f)
-        """
-        ell = ENGLISH_LANG_LEN
-        (i, j, k, l) = tuple(
-            english_chars.index(char)
-            for char in Hill.EXPECT_QUAD.lower()
+    def mono_crypt(bigram, key, top: bool):
+        start = Hill.Vector(
+            top=english_chars.index(bigram[0]),
+            bottom=english_chars.index(bigram[1])
         )
-        (e, f, g, h) = tuple(english_chars.index(char) for char in quadgram)
-        a = (
-            i * mod_inverse(
-                e - f*g*mod_inverse(h, ell), ell
-            )
-        ) % ENGLISH_LANG_LEN
-        b = (
-            (i - a*e)*mod_inverse(f, ell)
-        ) % ENGLISH_LANG_LEN
-        c = (
-            l * mod_inverse(
-                g + j*h*mod_inverse(f, ell) - e*h*mod_inverse(f, ell), ell
-            )
-        ) % ENGLISH_LANG_LEN
-        d = (
-            (j - e*c)*mod_inverse(f, ell)
+        if top:
+            crypted = (
+                key.top.a * start.top + key.top.b * start.bottom
+            ) % ENGLISH_LANG_LEN
+        else:
+            crypted = (
+                key.bottom.c * start.top + key.bottom.d * start.bottom
+            ) % ENGLISH_LANG_LEN
+        return english_chars[crypted]
+
+    def best_tops(self):
+        text = letters(self.text).lower()
+        top_text = list(
+            text[::]
         )
-        top = Hill.Top(a, b)
-        bottom = Hill.Bottom(c, d)
-        return Hill.Matrix(top, bottom)
+        pass
 
     def encipher(self, give_key=False):
         text = letters(self.text).lower()
@@ -1293,5 +1266,9 @@ class Challenge2018:
 if __name__ == "__main__":
     x = cipher_texts.Challenge2018.encrypted_text_4B
     y = ""
-    print(Challenge2018.solution_3B)
+    # print(Challenge2018.solution_3B)
+    mat_top = Hill.Top(25, 22)
+    mat_bot = Hill.Bottom(1, 23)
+    mat_ful = Hill.Matrix(mat_top, mat_bot)
+    z = letters(x).lower()
     print("--- %s seconds ---" % (time.time() - start_time))
