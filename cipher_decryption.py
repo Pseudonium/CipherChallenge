@@ -1284,8 +1284,9 @@ class Playfair:
 
 class Foursquare:
     ALPHABET_NO_J = "ABCDEFGHIKLMNOPQRSTUVWXYZ"
+    alphabet = ALPHABET_NO_J.lower()
 
-    def __init__(self, text, key1, key2):
+    def __init__(self, text, key1="", key2=""):
         self.text = text
         self.key1 = key1
         self.key2 = key2
@@ -1295,7 +1296,7 @@ class Foursquare:
         bigram = bigram.lower()
         key1 = key1.lower()
         key2 = key2.lower()
-        alphabet = Foursquare.ALPHABET_NO_J.lower()
+        alphabet = Foursquare.alphabet
         a, b = bigram[0], bigram[1]
 
         pos_a = key1.index(a)
@@ -1335,15 +1336,20 @@ class Foursquare:
 
     @property
     def best_key(self):
+        initial = [
+            "".join(random.sample(Foursquare.ALPHABET_NO_J, k=25)),
+            "".join(random.sample(Foursquare.ALPHABET_NO_J, k=25))
+        ]
         return simulated_annealing(
-            initial_key="".join(random.sample(Foursquare.ALPHABET_NO_J, k=25)),
+            initial_key=initial,
             fitness=self.text_fitness,
             new_key=Foursquare.gen_new_key,
             initial_temp=30,
             count=20000,
             max_length=10000,
             stale=10000,
-            stale_fitness=-7600
+            stale_fitness=-11000,
+            threshold=-11000
         )
 
     def encipher(self, key1="", key2="", give_key=False, pretty=False):
@@ -1352,7 +1358,8 @@ class Foursquare:
                 key1 = self.key1
                 key2 = self.key2
             else:
-                raise NotImplementedError
+                best = self.best_key
+                key1, key2 = best[0], best[1]
         text = letters(self.text).lower()
         split_text = chunked(text, 2)
         enciphered = "".join(
@@ -1741,13 +1748,4 @@ class Challenge2018:
 
 
 if __name__ == "__main__":
-    x = letters(cipher_texts.Test.foursquare_encrypted)
-    k_ey1 = "ETNYRKHSALVUPZQXWMFBGOIDC"
-    k_ey2 = "OWGXHEAIQZTDCRLVFPYKNBUMS"
-    y = Foursquare(
-        x,
-        key1=k_ey1,
-        key2=k_ey2
-    )
-    print(y.encipher())
     print("--- %s seconds ---" % (time.time() - start_time))
