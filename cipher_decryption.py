@@ -626,20 +626,6 @@ class MonoSub:
         return current_key
 
     @staticmethod
-    def new_key(key: dict, swap: tuple) -> dict:
-        """Swaps two substitutions in a key."""
-        new_key = list(MonoSub.CharSwap(*item) for item in key.items())
-        pair = [new_key[swap[0]], new_key[swap[1]]]
-        a = pair[0].swap_char
-        b = pair[1].swap_char
-        pair[0] = MonoSub.CharSwap(char=pair[0].char, swap_char=b)
-        pair[1] = MonoSub.CharSwap(char=pair[1].char, swap_char=a)
-        (new_key[swap[0]],
-         new_key[swap[1]]) = pair[0], pair[1]
-        new_key = dict(new_key)
-        return new_key
-
-    @staticmethod
     def gen_neigbors_key(key):
         for swap1, swap2 in itertools.combinations(range(ENGLISH_LANG_LEN), 2):
             new_key = list(list(item) for item in key.items())
@@ -662,28 +648,6 @@ class MonoSub:
             fitness=self.text_fitness,
             neighbors=MonoSub.gen_neigbors_key
         )
-        """
-        current_key = self.prob_key
-        for count in range(MonoSub.MAX_SEARCH):
-            parent_text = self.encipher(key=current_key)
-            parent_fit = english_quadgram_fitness(parent_text)
-            possible_keys = [MonoSub.KeyFit(current_key, parent_fit)]
-            for swap in itertools.combinations(range(ENGLISH_LANG_LEN), 2):
-                new_key = self.new_key(current_key, swap)
-                child_text = self.encipher(key=new_key)
-                child_fit = english_quadgram_fitness(child_text)
-                possible_keys.append(MonoSub.KeyFit(new_key, child_fit))
-            best_new_key = sorted(
-                possible_keys,
-                key=lambda x: x.fitness,
-                reverse=True
-            )[0].key
-            if current_key == best_new_key:
-                return current_key
-            else:
-                current_key = best_new_key
-        return current_key
-        """
 
     def encipher(self, key: dict={}, give_key=False) -> str:
         if not key:
