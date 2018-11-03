@@ -344,7 +344,7 @@ class Affine:
         a = (p1 - p2)(c1 - c2) ^ -1
         b = p1 - a*c1
         """
-        possible_keys = list()
+        #possible_keys = list()
         for pair in self.modal_pairs:
             try:
                 cipher1 = english_chars.index(pair[0])
@@ -358,8 +358,9 @@ class Affine:
             except ValueError:
                 continue
             else:
-                possible_keys.append(Affine.Key(a, b))
-        return possible_keys
+                yield Affine.Key(a, b)
+                #possible_keys.append(Affine.Key(a, b))
+        # return possible_keys
 
     @staticmethod
     def char_shift(char: str, key) -> str:
@@ -1903,9 +1904,5 @@ class Challenge2018:
 
 
 if __name__ == "__main__":
-    x = cipher_texts.Challenge2018.encrypted_text_3B
-    y = MonoSub(
-        text=x
-    )
-    print(y.encipher(give_key=True))
+    x = cipher_texts.Challenge2018.encrypted_text_2B
     print("--- %s seconds ---" % (time.time() - start_time))
