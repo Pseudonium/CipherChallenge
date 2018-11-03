@@ -639,8 +639,30 @@ class MonoSub:
         new_key = dict(new_key)
         return new_key
 
+    @staticmethod
+    def gen_neigbors_key(key):
+        for swap1, swap2 in itertools.combinations(range(ENGLISH_LANG_LEN), 2):
+            new_key = list(list(item) for item in key.items())
+            pair1, pair2 = new_key[swap1], new_key[swap2]
+            pair1[1], pair2[1] = pair2[1], pair1[1]
+            yield {char: swap_char for char, swap_char in new_key}
+
+    @property
+    def text_fitness(self):
+        def key_fitness(key):
+            return english_quadgram_fitness(
+                self.encipher(key=key)
+            )
+        return key_fitness
+
     @property
     def best_key(self) -> dict:
+        return hill_climbing(
+            initial_key=self.prob_key,
+            fitness=self.text_fitness,
+            neighbors=MonoSub.gen_neigbors_key
+        )
+        """
         current_key = self.prob_key
         for count in range(MonoSub.MAX_SEARCH):
             parent_text = self.encipher(key=current_key)
@@ -661,12 +683,14 @@ class MonoSub:
             else:
                 current_key = best_new_key
         return current_key
+        """
 
     def encipher(self, key: dict={}, give_key=False) -> str:
-        if not key and self.auto:
-            key = self.best_key
-        elif self.key:
-            key = self.key
+        if not key:
+            if self.key:
+                key = self.key
+            else:
+                key = self.best_key
         enciphered = "".join(
             key[char] if char in key
             else char for char in self.text.lower()
@@ -1915,5 +1939,9 @@ class Challenge2018:
 
 
 if __name__ == "__main__":
-    x = cipher_texts.Challenge2004.encrypted_text_3B
+    x = cipher_texts.Challenge2018.encrypted_text_3B
+    y = MonoSub(
+        text=x
+    )
+    print(y.encipher(give_key=True))
     print("--- %s seconds ---" % (time.time() - start_time))
