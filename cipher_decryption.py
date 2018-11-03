@@ -1645,6 +1645,72 @@ class Challenge2004:
         key=(8, 6, 0, 3, 7, 1, 2, 5, 4),
         keep=["0", "1"]
     ).encipher()
+    solution_4A = Affine(
+        cipher_texts.Challenge2004.encrypted_text_4A,
+        switch=(19, 7)
+    ).encipher()
+    solution_4B = MonoSub(
+        cipher_texts.Challenge2004.encrypted_text_4B,
+        key={
+            'n': 'A',
+            'i': 'B',
+            'c': 'C',
+            'o': 'D',
+            'l': 'E',
+            'a': 'F',
+            's': 'G',
+            'f': 'H',
+            'm': 'I',
+            'e': 'J',
+            'g': 'K',
+            'h': 'L',
+            'j': 'M',
+            'k': 'N',
+            'p': 'O',
+            'q': 'P',
+            'r': 'Q',
+            't': 'R',
+            'u': 'S',
+            'v': 'T',
+            'w': 'U',
+            'x': 'V',
+            'y': 'W',
+            'z': 'X',
+            'b': 'Y',
+            'd': 'Z'
+        }
+    ).encipher()
+    solution_5A = MonoSub(
+        cipher_texts.Challenge2004.encrypted_text_5A,
+        key={
+            'i': 'A',
+            's': 'B',
+            'a': 'C',
+            'c': 'D',
+            'n': 'E',
+            'e': 'F',
+            'w': 'G',
+            't': 'H',
+            'o': 'I',
+            'b': 'J',
+            'd': 'K',
+            'f': 'L',
+            'g': 'M',
+            'h': 'N',
+            'j': 'O',
+            'k': 'P',
+            'x': 'Q',
+            'm': 'R',
+            'p': 'S',
+            'q': 'T',
+            'r': 'U',
+            'u': 'V',
+            'v': 'W',
+            'l': 'X',
+            'y': 'Y',
+            'z': 'Z'
+        }
+    ).encipher()
 
 
 class Challenge2016:
@@ -1904,5 +1970,7 @@ class Challenge2018:
 
 
 if __name__ == "__main__":
-    x = cipher_texts.Challenge2018.encrypted_text_2B
+    x = cipher_texts.Challenge2004
+    y = MonoSub(x)
+    print(Challenge2004.solution_5A)
     print("--- %s seconds ---" % (time.time() - start_time))
