@@ -67,6 +67,33 @@ def chunked(iterable, chunk_length):
     )
 
 
+def hill_climbing(
+    initial_key,
+    fitness,
+    neighbors,
+    count=1000
+):
+    current_key = initial_key
+    for c in range(count):
+        possible_keys = list()
+        parent_fitness = fitness(current_key)
+        print(parent_fitness)
+        possible_keys.append(KeyFit(key=current_key, fitness=parent_fitness))
+        for child_key in neighbors(current_key):
+            child_fitness = fitness(child_key)
+            possible_keys.append(KeyFit(key=child_key, fitness=child_fitness))
+        best_key = sorted(
+            possible_keys,
+            key=lambda elem: elem.fitness,
+            reverse=True
+        )[0].key
+        if current_key == best_key:
+            break
+        else:
+            current_key = best_key
+    return current_key
+
+
 def simulated_annealing(
     initial_key,
     fitness,
@@ -168,6 +195,9 @@ TextFit = collections.namedtuple(
 )
 TextKey = collections.namedtuple(
     "TextKey", ['text', 'key']
+)
+KeyFit = collections.namedtuple(
+    "KeyFitness", ['key', 'fitness']
 )
 
 
@@ -888,16 +918,19 @@ class AutoKey:
 
 class ColTrans:
 
-    MAX_SEARCH = 7
+    MAX_SEARCH = 10
 
     TextFitPerm = collections.namedtuple(
         'TextFitnessPermutation',
         ['text', 'fitness', 'perm']
     )
 
-    def __init__(self, text, key: tuple=()):
+    def __init__(self, text, key: tuple=(), guessed_length: int=1, keep=[]):
         self.text = text
         self.key = key
+        self.guessed_length = guessed_length
+        self.auto_length = guessed_length == 1
+        self.keep = keep
         self.auto = not bool(key)
 
     @staticmethod
@@ -913,27 +946,69 @@ class ColTrans:
             for perm_index in key
         )
 
-    def encipher(self, key: tuple=(), give_key=False):
-        text = letters(self.text).lower()
-        if self.auto:
+    @property
+    def text_fitness(self):
+        def key_fitness(key):
+            return english_quadgram_fitness(self.encipher(key=key))
+        return key_fitness
+
+    @staticmethod
+    def gen_new_key(key):
+        swap1, swap2 = tuple(random.choices(range(len(key)), k=2))
+        new_key = list(key)
+        new_key[swap1], new_key[swap2] = new_key[swap2], new_key[swap1]
+        return tuple(new_key)
+
+    @property
+    def best_key(self):
+        initial = tuple(
+            random.sample(
+                range(self.guessed_length),
+                k=self.guessed_length
+            )
+        )
+        print(initial)
+        return simulated_annealing(
+            initial_key=initial,
+            fitness=self.text_fitness,
+            new_key=ColTrans.gen_new_key,
+            stale_fitness=-7300,
+            threshold=-6900
+        )
+        pass
+
+    def encipher(self, key: tuple=(), give_key=False, keep=[], pretty=False):
+        text = letters(self.text, keep=self.keep)
+        if not key:
+            if self.key:
+                key = self.key
+            else:
+                if self.auto_length:
+                    raise NotImplementedError
+                else:
+                    key = self.best_key
+            """
             possible_texts = list()
-            for key_length in range(2, ColTrans.MAX_SEARCH):
+            for key_length in range(9, ColTrans.MAX_SEARCH):
                 split_text = list(
                     text[i: i + key_length]
                     for i in range(0, len(text), key_length)
                 )
                 for perm in itertools.permutations(range(key_length)):
+                    print(perm)
                     enciphered = "".join(
                         self.permute(split, perm)
                         for split in split_text
                     )
+                    fit = english_quadgram_fitness(enciphered)
                     possible_texts.append(
                         ColTrans.TextFitPerm(
                             text=enciphered,
-                            fitness=english_quadgram_fitness(enciphered),
+                            fitness=fit,
                             perm=perm
                         )
                     )
+                    print(fit)
             best = sorted(
                 possible_texts,
                 key=lambda elem: elem.fitness,
@@ -941,19 +1016,21 @@ class ColTrans:
             )[0]
             enciphered = best.text
             self.key = best.perm
-        else:
-            split_text = (
-                text[i: i + len(self.key)]
-                for i in range(0, len(text), len(self.key))
-            )
-            enciphered = "".join(
-                self.permute(split, self.key)
-                for split in split_text
-            )
+        """
+        split_text = (
+            text[i: i + len(key)]
+            for i in range(0, len(text), len(key))
+        )
+        enciphered = "".join(
+            self.permute(split, key)
+            for split in split_text
+        )
+        if pretty:
+            enciphered = match(self.text, enciphered)
         if give_key:
-            return TextKey(match(self.text, enciphered), self.key)
+            return TextKey(enciphered, key)
         else:
-            return match(self.text, enciphered)
+            return enciphered
 
 
 class ScyColTrans:
@@ -1553,6 +1630,29 @@ class Hill:
             return match(self.text, enciphered)
 
 
+class Challenge2004:
+    solution_1A = Caesar(
+        cipher_texts.Challenge2004.encrypted_text_1A,
+        shift=13
+    ).encipher()
+    solution_1B = Affine(
+        cipher_texts.Challenge2004.encrypted_text_1B,
+        switch=(15, 4)
+    ).encipher()
+    solution_2A = Caesar(
+        cipher_texts.Challenge2004.encrypted_text_2A,
+        shift=20
+    ).encipher()
+    solution_2B = Affine(
+        cipher_texts.Challenge2004.encrypted_text_2B,
+        switch=(25, 0)
+    ).encipher()
+    solution_3A = Caesar(
+        cipher_texts.Challenge2004.encrypted_text_3A,
+        shift=7
+    ).encipher()
+
+
 class Challenge2016:
     solution_1A = Caesar(
         cipher_texts.Challenge2016.encrypted_text_1A,
@@ -1792,4 +1892,17 @@ class Challenge2018:
 
 
 if __name__ == "__main__":
+    x = cipher_texts.Challenge2004.encrypted_text_3B
+    y = ColTrans(
+        x,
+        #key=(8, 6, 0, 3, 7, 1, 2, 5, 4),
+        guessed_length=9,
+        keep=["0", "1"]
+    )
+    z = letters(x)
+    w = letters(x, keep=[str(i) for i in range(10)])
+    print(y.encipher())
+    #print(y.text_fitness((0, 1, 2, 3, 4, 5, 6, 7, 8)))
+    # print(Challenge2016.solution_4B)
+    #print(ColTrans.permute("RMI1LLE0V", key=(8, 6, 0, 3, 7, 1, 2, 5, 4)))
     print("--- %s seconds ---" % (time.time() - start_time))
