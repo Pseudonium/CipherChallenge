@@ -1651,6 +1651,11 @@ class Challenge2004:
         cipher_texts.Challenge2004.encrypted_text_3A,
         shift=7
     ).encipher()
+    solution_3B = ColTrans(
+        cipher_texts.Challenge2004.encrypted_text_3B,
+        key=(8, 6, 0, 3, 7, 1, 2, 5, 4),
+        keep=["0", "1"]
+    ).encipher()
 
 
 class Challenge2016:
@@ -1851,6 +1856,24 @@ class Challenge2017:
             reset=12
         ).encipher())
     )
+    solutions = [
+        solution_1A,
+        solution_1B,
+        solution_2A,
+        solution_2B,
+        solution_3A,
+        solution_3B,
+        solution_4A,
+        solution_4B,
+        solution_5A,
+        solution_5B,
+        solution_6A,
+        solution_6B,
+        solution_7A,
+        solution_7B,
+        solution_8A,
+        solution_8B
+    ]
 
 
 class Challenge2018:
@@ -1893,16 +1916,4 @@ class Challenge2018:
 
 if __name__ == "__main__":
     x = cipher_texts.Challenge2004.encrypted_text_3B
-    y = ColTrans(
-        x,
-        #key=(8, 6, 0, 3, 7, 1, 2, 5, 4),
-        guessed_length=9,
-        keep=["0", "1"]
-    )
-    z = letters(x)
-    w = letters(x, keep=[str(i) for i in range(10)])
-    print(y.encipher())
-    #print(y.text_fitness((0, 1, 2, 3, 4, 5, 6, 7, 8)))
-    # print(Challenge2016.solution_4B)
-    #print(ColTrans.permute("RMI1LLE0V", key=(8, 6, 0, 3, 7, 1, 2, 5, 4)))
     print("--- %s seconds ---" % (time.time() - start_time))
