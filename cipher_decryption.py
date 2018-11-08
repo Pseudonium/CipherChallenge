@@ -1789,11 +1789,20 @@ class Challenge2018:
         key="realpoitk",
         keyword=True
     ).encipher()
+    solution_5A = MonoSub(
+        cipher_texts.Challenge2018.encrypted_text_5A,
+        key="aridne",
+        keyword=True
+    ).encipher()
+    solution_5B = MonoSub(
+        "".join(reversed(cipher_texts.Challenge2018.encrypted_text_5B)),
+        key="reichstad",
+        keyword=True
+    ).encipher()
 
 
 if __name__ == "__main__":
     x = cipher_texts.Challenge2018.encrypted_text_5B
-    y = MonoSub("".join(reversed(x)))
-    print(y.encipher(give_key=True))
-
+    y = MonoSub("".join(reversed(x)), key="reichstad", keyword=True)
+    print(Challenge2018.solution_5B)
     print("--- %s seconds ---" % (time.time() - start_time))
