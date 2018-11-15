@@ -2001,10 +2001,14 @@ class Challenge2018:
         key="nautilus",
         keyword=True
     ).encipher()
+    solution_6B = ColTrans(
+        cipher_texts.Challenge2018.encrypted_text_6B,
+        key=(1, 0, 4, 3, 2)
+    ).encipher()
 
 
 if __name__ == "__main__":
     x = cipher_texts.Challenge2018.encrypted_text_6B
     y = ColTrans(x, key=(1, 0, 4, 3, 2))
-    print()
+    print(Challenge2018.solution_6B)
     print("--- %s seconds ---" % (time.time() - start_time))
