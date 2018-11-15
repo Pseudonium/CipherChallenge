@@ -67,6 +67,33 @@ def chunked(iterable, chunk_length):
     )
 
 
+def hill_climbing(
+    initial_key,
+    fitness,
+    neighbors,
+    count=1000
+):
+    current_key = initial_key
+    for c in range(count):
+        possible_keys = list()
+        parent_fitness = fitness(current_key)
+        print(parent_fitness)
+        possible_keys.append(KeyFit(key=current_key, fitness=parent_fitness))
+        for child_key in neighbors(current_key):
+            child_fitness = fitness(child_key)
+            possible_keys.append(KeyFit(key=child_key, fitness=child_fitness))
+        best_key = sorted(
+            possible_keys,
+            key=lambda elem: elem.fitness,
+            reverse=True
+        )[0].key
+        if current_key == best_key:
+            break
+        else:
+            current_key = best_key
+    return current_key
+
+
 def simulated_annealing(
     initial_key,
     fitness,
@@ -168,6 +195,9 @@ TextFit = collections.namedtuple(
 )
 TextKey = collections.namedtuple(
     "TextKey", ['text', 'key']
+)
+KeyFit = collections.namedtuple(
+    "KeyFitness", ['key', 'fitness']
 )
 
 
@@ -314,7 +344,7 @@ class Affine:
         a = (p1 - p2)(c1 - c2) ^ -1
         b = p1 - a*c1
         """
-        possible_keys = list()
+        #possible_keys = list()
         for pair in self.modal_pairs:
             try:
                 cipher1 = english_chars.index(pair[0])
@@ -328,8 +358,9 @@ class Affine:
             except ValueError:
                 continue
             else:
-                possible_keys.append(Affine.Key(a, b))
-        return possible_keys
+                yield Affine.Key(a, b)
+                #possible_keys.append(Affine.Key(a, b))
+        # return possible_keys
 
     @staticmethod
     def char_shift(char: str, key) -> str:
@@ -596,47 +627,35 @@ class MonoSub:
         return current_key
 
     @staticmethod
-    def new_key(key: dict, swap: tuple) -> dict:
-        """Swaps two substitutions in a key."""
-        new_key = list(MonoSub.CharSwap(*item) for item in key.items())
-        pair = [new_key[swap[0]], new_key[swap[1]]]
-        a = pair[0].swap_char
-        b = pair[1].swap_char
-        pair[0] = MonoSub.CharSwap(char=pair[0].char, swap_char=b)
-        pair[1] = MonoSub.CharSwap(char=pair[1].char, swap_char=a)
-        (new_key[swap[0]],
-         new_key[swap[1]]) = pair[0], pair[1]
-        new_key = dict(new_key)
-        return new_key
+    def gen_neigbors_key(key):
+        for swap1, swap2 in itertools.combinations(range(ENGLISH_LANG_LEN), 2):
+            new_key = list(list(item) for item in key.items())
+            pair1, pair2 = new_key[swap1], new_key[swap2]
+            pair1[1], pair2[1] = pair2[1], pair1[1]
+            yield {char: swap_char for char, swap_char in new_key}
+
+    @property
+    def text_fitness(self):
+        def key_fitness(key):
+            return english_quadgram_fitness(
+                self.encipher(key=key)
+            )
+        return key_fitness
 
     @property
     def best_key(self) -> dict:
-        current_key = self.prob_key
-        for count in range(MonoSub.MAX_SEARCH):
-            parent_text = self.encipher(key=current_key)
-            parent_fit = english_quadgram_fitness(parent_text)
-            possible_keys = [MonoSub.KeyFit(current_key, parent_fit)]
-            for swap in itertools.combinations(range(ENGLISH_LANG_LEN), 2):
-                new_key = self.new_key(current_key, swap)
-                child_text = self.encipher(key=new_key)
-                child_fit = english_quadgram_fitness(child_text)
-                possible_keys.append(MonoSub.KeyFit(new_key, child_fit))
-            best_new_key = sorted(
-                possible_keys,
-                key=lambda x: x.fitness,
-                reverse=True
-            )[0].key
-            if current_key == best_new_key:
-                return current_key
-            else:
-                current_key = best_new_key
-        return current_key
+        return hill_climbing(
+            initial_key=self.prob_key,
+            fitness=self.text_fitness,
+            neighbors=MonoSub.gen_neigbors_key
+        )
 
     def encipher(self, key: dict={}, give_key=False) -> str:
-        if not key and self.auto:
-            key = self.best_key
-        elif self.key:
-            key = self.key
+        if not key:
+            if self.key:
+                key = self.key
+            else:
+                key = self.best_key
         enciphered = "".join(
             key[char] if char in key
             else char for char in self.text.lower()
@@ -888,16 +907,19 @@ class AutoKey:
 
 class ColTrans:
 
-    MAX_SEARCH = 7
+    MAX_SEARCH = 10
 
     TextFitPerm = collections.namedtuple(
         'TextFitnessPermutation',
         ['text', 'fitness', 'perm']
     )
 
-    def __init__(self, text, key: tuple=()):
+    def __init__(self, text, key: tuple=(), guessed_length: int=1, keep=[]):
         self.text = text
         self.key = key
+        self.guessed_length = guessed_length
+        self.auto_length = guessed_length == 1
+        self.keep = keep
         self.auto = not bool(key)
 
     @staticmethod
@@ -913,27 +935,69 @@ class ColTrans:
             for perm_index in key
         )
 
-    def encipher(self, key: tuple=(), give_key=False):
-        text = letters(self.text).lower()
-        if self.auto:
+    @property
+    def text_fitness(self):
+        def key_fitness(key):
+            return english_quadgram_fitness(self.encipher(key=key))
+        return key_fitness
+
+    @staticmethod
+    def gen_new_key(key):
+        swap1, swap2 = tuple(random.choices(range(len(key)), k=2))
+        new_key = list(key)
+        new_key[swap1], new_key[swap2] = new_key[swap2], new_key[swap1]
+        return tuple(new_key)
+
+    @property
+    def best_key(self):
+        initial = tuple(
+            random.sample(
+                range(self.guessed_length),
+                k=self.guessed_length
+            )
+        )
+        print(initial)
+        return simulated_annealing(
+            initial_key=initial,
+            fitness=self.text_fitness,
+            new_key=ColTrans.gen_new_key,
+            stale_fitness=-7300,
+            threshold=-6900
+        )
+        pass
+
+    def encipher(self, key: tuple=(), give_key=False, keep=[], pretty=False):
+        text = letters(self.text, keep=self.keep)
+        if not key:
+            if self.key:
+                key = self.key
+            else:
+                if self.auto_length:
+                    raise NotImplementedError
+                else:
+                    key = self.best_key
+            """
             possible_texts = list()
-            for key_length in range(2, ColTrans.MAX_SEARCH):
+            for key_length in range(9, ColTrans.MAX_SEARCH):
                 split_text = list(
                     text[i: i + key_length]
                     for i in range(0, len(text), key_length)
                 )
                 for perm in itertools.permutations(range(key_length)):
+                    print(perm)
                     enciphered = "".join(
                         self.permute(split, perm)
                         for split in split_text
                     )
+                    fit = english_quadgram_fitness(enciphered)
                     possible_texts.append(
                         ColTrans.TextFitPerm(
                             text=enciphered,
-                            fitness=english_quadgram_fitness(enciphered),
+                            fitness=fit,
                             perm=perm
                         )
                     )
+                    print(fit)
             best = sorted(
                 possible_texts,
                 key=lambda elem: elem.fitness,
@@ -941,19 +1005,21 @@ class ColTrans:
             )[0]
             enciphered = best.text
             self.key = best.perm
-        else:
-            split_text = (
-                text[i: i + len(self.key)]
-                for i in range(0, len(text), len(self.key))
-            )
-            enciphered = "".join(
-                self.permute(split, self.key)
-                for split in split_text
-            )
+        """
+        split_text = (
+            text[i: i + len(key)]
+            for i in range(0, len(text), len(key))
+        )
+        enciphered = "".join(
+            self.permute(split, key)
+            for split in split_text
+        )
+        if pretty:
+            enciphered = match(self.text, enciphered)
         if give_key:
-            return TextKey(match(self.text, enciphered), self.key)
+            return TextKey(enciphered, key)
         else:
-            return match(self.text, enciphered)
+            return enciphered
 
 
 class ScyColTrans:
@@ -1553,6 +1619,100 @@ class Hill:
             return match(self.text, enciphered)
 
 
+class Challenge2004:
+    solution_1A = Caesar(
+        cipher_texts.Challenge2004.encrypted_text_1A,
+        shift=13
+    ).encipher()
+    solution_1B = Affine(
+        cipher_texts.Challenge2004.encrypted_text_1B,
+        switch=(15, 4)
+    ).encipher()
+    solution_2A = Caesar(
+        cipher_texts.Challenge2004.encrypted_text_2A,
+        shift=20
+    ).encipher()
+    solution_2B = Affine(
+        cipher_texts.Challenge2004.encrypted_text_2B,
+        switch=(25, 0)
+    ).encipher()
+    solution_3A = Caesar(
+        cipher_texts.Challenge2004.encrypted_text_3A,
+        shift=7
+    ).encipher()
+    solution_3B = ColTrans(
+        cipher_texts.Challenge2004.encrypted_text_3B,
+        key=(8, 6, 0, 3, 7, 1, 2, 5, 4),
+        keep=["0", "1"]
+    ).encipher()
+    solution_4A = Affine(
+        cipher_texts.Challenge2004.encrypted_text_4A,
+        switch=(19, 7)
+    ).encipher()
+    solution_4B = MonoSub(
+        cipher_texts.Challenge2004.encrypted_text_4B,
+        key={
+            'n': 'A',
+            'i': 'B',
+            'c': 'C',
+            'o': 'D',
+            'l': 'E',
+            'a': 'F',
+            's': 'G',
+            'f': 'H',
+            'm': 'I',
+            'e': 'J',
+            'g': 'K',
+            'h': 'L',
+            'j': 'M',
+            'k': 'N',
+            'p': 'O',
+            'q': 'P',
+            'r': 'Q',
+            't': 'R',
+            'u': 'S',
+            'v': 'T',
+            'w': 'U',
+            'x': 'V',
+            'y': 'W',
+            'z': 'X',
+            'b': 'Y',
+            'd': 'Z'
+        }
+    ).encipher()
+    solution_5A = MonoSub(
+        cipher_texts.Challenge2004.encrypted_text_5A,
+        key={
+            'i': 'A',
+            's': 'B',
+            'a': 'C',
+            'c': 'D',
+            'n': 'E',
+            'e': 'F',
+            'w': 'G',
+            't': 'H',
+            'o': 'I',
+            'b': 'J',
+            'd': 'K',
+            'f': 'L',
+            'g': 'M',
+            'h': 'N',
+            'j': 'O',
+            'k': 'P',
+            'x': 'Q',
+            'm': 'R',
+            'p': 'S',
+            'q': 'T',
+            'r': 'U',
+            'u': 'V',
+            'v': 'W',
+            'l': 'X',
+            'y': 'Y',
+            'z': 'Z'
+        }
+    ).encipher()
+
+
 class Challenge2016:
     solution_1A = Caesar(
         cipher_texts.Challenge2016.encrypted_text_1A,
@@ -1751,6 +1911,24 @@ class Challenge2017:
             reset=12
         ).encipher())
     )
+    solutions = [
+        solution_1A,
+        solution_1B,
+        solution_2A,
+        solution_2B,
+        solution_3A,
+        solution_3B,
+        solution_4A,
+        solution_4B,
+        solution_5A,
+        solution_5B,
+        solution_6A,
+        solution_6B,
+        solution_7A,
+        solution_7B,
+        solution_8A,
+        solution_8B
+    ]
 
 
 class Challenge2018:
