@@ -942,11 +942,30 @@ class ColTrans:
         return key_fitness
 
     @staticmethod
-    def gen_new_key(key):
+    def swap_two_pos(key):
         swap1, swap2 = tuple(random.choices(range(len(key)), k=2))
         new_key = list(key)
         new_key[swap1], new_key[swap2] = new_key[swap2], new_key[swap1]
         return tuple(new_key)
+
+    @staticmethod
+    def segment_slide(key):
+        seg_1, seg_2 = random.sample(range(len(key)), k=2)
+        if seg_1 > seg_2:
+            seg_1, seg_2 = seg_2, seg_1
+        segment = key[seg_1:seg_2]
+        key_no_seg = key[:seg_1] + key[seg_2:]
+        shift = random.randrange(len(segment))
+        return key_no_seg[:shift] + segment + key_no_seg[shift:]
+
+    @staticmethod
+    def gen_new_key(key):
+        choice = random.randrange(2)
+        transformations = {
+            0: ColTrans.swap_two_pos,
+            1: ColTrans.segment_slide
+        }
+        return transformations[choice](key)
 
     @property
     def best_key(self):
@@ -961,8 +980,8 @@ class ColTrans:
             initial_key=initial,
             fitness=self.text_fitness,
             new_key=ColTrans.gen_new_key,
-            stale_fitness=-7300,
-            threshold=-6900
+            stale_fitness=-9000,
+            threshold=-9000
         )
         pass
 
@@ -1977,10 +1996,15 @@ class Challenge2018:
         key="reichstad",
         keyword=True
     ).encipher()
+    solution_6A = MonoSub(
+        cipher_texts.Challenge2018.encrypted_text_6A,
+        key="nautilus",
+        keyword=True
+    ).encipher()
 
 
 if __name__ == "__main__":
     x = cipher_texts.Challenge2018.encrypted_text_6B
-    y = ColTrans(x)
-    print(y.encipher(give_key=True))
+    y = ColTrans(x, key=(1, 0, 4, 3, 2))
+    print()
     print("--- %s seconds ---" % (time.time() - start_time))
