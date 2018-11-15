@@ -1964,13 +1964,23 @@ class Challenge2018:
     ).encipher()
     solution_4B = MonoSub(
         cipher_texts.Challenge2018.encrypted_text_4B,
-        key="realpoitk",
+        key="realpolitik",
+        keyword=True
+    ).encipher()
+    solution_5A = MonoSub(
+        cipher_texts.Challenge2018.encrypted_text_5A,
+        key="ariadne",
+        keyword=True
+    ).encipher()
+    solution_5B = MonoSub(
+        "".join(reversed(cipher_texts.Challenge2018.encrypted_text_5B)),
+        key="reichstad",
         keyword=True
     ).encipher()
 
 
 if __name__ == "__main__":
-    x = cipher_texts.Challenge2004
-    y = MonoSub(x)
-    print(Challenge2004.solution_5A)
+    x = cipher_texts.Challenge2018.encrypted_text_6B
+    y = ColTrans(x)
+    print(y.encipher(give_key=True))
     print("--- %s seconds ---" % (time.time() - start_time))
