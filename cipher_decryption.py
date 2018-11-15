@@ -1802,7 +1802,7 @@ class Challenge2018:
 
 
 if __name__ == "__main__":
-    x = cipher_texts.Challenge2018.encrypted_text_5B
-    y = MonoSub("".join(reversed(x)), key="reichstad", keyword=True)
-    print(Challenge2018.solution_4B)
+    x = cipher_texts.Challenge2018.encrypted_text_6B
+    y = ColTrans(x)
+    print(y.encipher(give_key=True))
     print("--- %s seconds ---" % (time.time() - start_time))
