@@ -997,36 +997,6 @@ class ColTrans:
                     raise NotImplementedError
                 else:
                     key = self.best_key
-            """
-            possible_texts = list()
-            for key_length in range(9, ColTrans.MAX_SEARCH):
-                split_text = list(
-                    text[i: i + key_length]
-                    for i in range(0, len(text), key_length)
-                )
-                for perm in itertools.permutations(range(key_length)):
-                    print(perm)
-                    enciphered = "".join(
-                        self.permute(split, perm)
-                        for split in split_text
-                    )
-                    fit = english_quadgram_fitness(enciphered)
-                    possible_texts.append(
-                        ColTrans.TextFitPerm(
-                            text=enciphered,
-                            fitness=fit,
-                            perm=perm
-                        )
-                    )
-                    print(fit)
-            best = sorted(
-                possible_texts,
-                key=lambda elem: elem.fitness,
-                reverse=True
-            )[0]
-            enciphered = best.text
-            self.key = best.perm
-        """
         split_text = (
             text[i: i + len(key)]
             for i in range(0, len(text), len(key))
@@ -2012,14 +1982,15 @@ class Challenge2018:
         key="danger",
         keyword=True
     ).encipher()
+    solution_7B = ScyColTrans(
+        cipher_texts.Challenge2018.encrypted_text_7B,
+        scy_key=7,
+        col_key=(1, 6, 4, 2, 0, 5, 3)
+    ).encipher()
 
 
 if __name__ == "__main__":
     x = cipher_texts.Challenge2018.encrypted_text_7B
-    y = Scytale(x, key=7, auto=False)
-    z = ColTrans(y.encipher(), guessed_length=7)
-    print(len(letters(x)))
-    for string in chunked(letters(x), 337):
-        print(string)
-    print(z.encipher(give_key=True))
+    y = ""
+    print(Challenge2018.solution_7B)
     print("--- %s seconds ---" % (time.time() - start_time))
