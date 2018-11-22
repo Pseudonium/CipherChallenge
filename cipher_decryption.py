@@ -101,9 +101,9 @@ def simulated_annealing(
     initial_temp=50,
     count=10000,
     max_length=1000,
-    stale=6000,
-    stale_fitness=-8000,
-    threshold=-6000
+    stale=100000,
+    stale_fitness=-100000,
+    threshold=-100000
 ):
     temp_step = initial_temp / count
     temp = initial_temp
@@ -516,7 +516,7 @@ class Scytale:
         self.auto = not bool(key > 1)
         self.keep = keep
 
-    def encipher(self, give_key=False) -> str:
+    def encipher(self, give_key=False, pretty=False) -> str:
         text = letters(self.text, keep=self.keep).lower()
         if self.auto:
             possible_texts = list()
@@ -546,10 +546,12 @@ class Scytale:
                 text[i::skip]
                 for i in range(skip)
             )
+        if pretty:
+            enciphered = match(self.text, enciphered)
         if give_key:
-            return TextKey(match(self.text, enciphered), self.key)
+            return TextKey(enciphered, self.key)
         else:
-            return match(self.text, enciphered)
+            return enciphered
 
 
 class ScytaleViginere:
@@ -980,8 +982,8 @@ class ColTrans:
             initial_key=initial,
             fitness=self.text_fitness,
             new_key=ColTrans.gen_new_key,
-            stale_fitness=-9000,
-            threshold=-9000
+            # stale_fitness=-10000,
+            # threshold=-10000
         )
         pass
 
@@ -2005,10 +2007,19 @@ class Challenge2018:
         cipher_texts.Challenge2018.encrypted_text_6B,
         key=(1, 0, 4, 3, 2)
     ).encipher()
+    solution_7A = MonoSub(
+        cipher_texts.Challenge2018.encrypted_text_7A,
+        key="danger",
+        keyword=True
+    ).encipher()
 
 
 if __name__ == "__main__":
-    x = cipher_texts.Challenge2018.encrypted_text_6B
-    y = ColTrans(x, key=(1, 0, 4, 3, 2))
-    print(Challenge2018.solution_6B)
+    x = cipher_texts.Challenge2018.encrypted_text_7B
+    y = Scytale(x, key=7, auto=False)
+    z = ColTrans(y.encipher(), guessed_length=7)
+    print(len(letters(x)))
+    for string in chunked(letters(x), 337):
+        print(string)
+    print(z.encipher(give_key=True))
     print("--- %s seconds ---" % (time.time() - start_time))
