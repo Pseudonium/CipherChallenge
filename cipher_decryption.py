@@ -1029,7 +1029,7 @@ class ScyColTrans:
         self.auto_col = not bool(col_key)
         self.key = ScyColTrans.Key(self.scy_key, self.col_key)
 
-    def encipher(self, give_key=False):
+    def encipher(self, give_key=False, pretty=False):
         if self.auto_scy and self.auto_col:
             possible_texts = list()
             for pos_scy_key in range(2, ScyColTrans.MAX_SEARCH):
@@ -1087,10 +1087,12 @@ class ScyColTrans:
         else:
             scytale = Scytale(self.text, key=self.scy_key).encipher()
             enciphered = ColTrans(scytale, key=self.col_key).encipher()
+        if pretty:
+            enciphered = match(self.text, enciphered)
         if give_key:
-            return TextKey(match(self.text, enciphered), self.key)
+            return TextKey(enciphered, self.key)
         else:
-            return match(self.text, enciphered)
+            return enciphered
 
 
 class Bifid:
@@ -1987,10 +1989,19 @@ class Challenge2018:
         scy_key=7,
         col_key=(1, 6, 4, 2, 0, 5, 3)
     ).encipher()
+    solution_8A = ScyColTrans(
+        cipher_texts.Challenge2018.encrypted_text_8A,
+        scy_key=8,
+        col_key=(2, 5, 7, 3, 4, 0, 6, 1)
+    ).encipher()
+    solution_8B = Viginere(
+        cipher_texts.Challenge2018.encrypted_text_8B,
+        key="shadow"
+    ).encipher()
 
 
 if __name__ == "__main__":
-    x = cipher_texts.Challenge2018.encrypted_text_7B
-    y = ""
-    print(Challenge2018.solution_7B)
+    x = cipher_texts.Challenge2018.encrypted_text_8B
+    w = Viginere(x, key="shadow")
+    print(Challenge2018.solution_8B)
     print("--- %s seconds ---" % (time.time() - start_time))
