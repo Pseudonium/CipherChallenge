@@ -2079,5 +2079,9 @@ class Challenge2018:
 
 
 if __name__ == "__main__":
-
+    z = """
+    Hello
+    This is a string
+    Is there a problem?
+    """
     print("--- %s seconds ---" % (time.time() - start_time))
