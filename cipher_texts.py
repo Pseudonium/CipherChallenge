@@ -493,6 +493,11 @@ class Challenge2019:
     TXLFNOB. PHDQZKLOH L ZRXOG UHFRPPHQG WKDW ZH LPSURYH VHFXULWB EB KLGLQJ
     WKH ZRUG VWUXFWXUH RI RXU PHVVDJHV XVLQJ WKH VWDQGDUG ILYH OHWWHU EORFN
     IRUPDW."""
+    encrypted_text_0B = """Htrwfijx,
+
+    ny nx tzw mnxytwnh izyd yt wjhtajw fs fwynhqj tk lwjfy afqzj yt ymj Rtymjwqfsi, uwtizhy tk ymj lwjfyjxy xhnjsynknh rnsix ns ymj Xtanjy Zsnts, fsi ymj qfgtzw tk ymj btwqi'x lwjfyjxy jslnsjjwx. Ymnx tgojhy, fgtzy bmnhm N hfs xfd st rtwj fy uwjxjsy, nx mninsl ns ijju bfyjwx zsijw ymj Fwhynh nhj, fsi ny nx tzw uwnanqnlj yt wjywnjaj ny. Bj mfaj ywfnsji mfwi ktw ozxy xzhm f wtqj, fsi stb bj mfaj fs tuutwyzsnyd yt xmtb tzw sfad ozxy bmfy ymnx gtfy hfs it.
+
+    Htrwfijx Rfqnstaxpn fsi Xmjqjuns mfaj ujwxtsfqqd wjhtrrjsiji tzw hwjb yt Htrwfij Pmwzxmhmja ktw ymnx rnxxnts. Xzhhjji fsi ujwmfux bj bnqq gj fqqtbji ymj mtstzw tk gjnsl ymj knwxy Xtanjy gtfy yt wjfhm ymj Stwym Utqj zsijw ymj nhj. Kfnq fsi bj bnqq wjyzws ns xmfrj yt tzw kfrnqnjx. Ymj mtstzw tk ymj Xtanjy Zsnts qnjx ns tzw mfsix."""
 
 
 class Test:

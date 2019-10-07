@@ -2078,10 +2078,17 @@ class Challenge2018:
     """
 
 
+class Challenge2019:
+    solution_0A = Caesar(
+        cipher_texts.Challenge2019.encrypted_text_0A, shift=23
+    ).encipher()
+    solution_0B = Caesar(
+        cipher_texts.Challenge2019.encrypted_text_0B, shift=21
+    ).encipher()
+
+
 if __name__ == "__main__":
-    z = """
-    Hello
-    This is a string
-    Is there a problem?
-    """
+    x = cipher_texts.Challenge2019.encrypted_text_0B
+    y = Caesar(x)
+    print(Challenge2019.solution_0B)
     print("--- %s seconds ---" % (time.time() - start_time))
