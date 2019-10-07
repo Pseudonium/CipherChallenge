@@ -67,6 +67,27 @@ def chunked(iterable, chunk_length):
     )
 
 
+def keys_nicer(key):
+    new_key = dict()
+    new_key_ls = list()
+    for k, v in key.items():
+        new_key_ls.append(
+            (k, v.upper())
+        )
+    return dict(sorted(new_key_ls, key=lambda x: x[1]))
+
+
+def key_swap_chars(key, char1, char2):
+    new_key = dict(key.items())
+    for k, value in new_key.items():
+        if value == char1:
+            swap1 = k
+        elif value == char2:
+            swap2 = k
+    new_key[swap1], new_key[swap2] = new_key[swap2], new_key[swap1]
+    return keys_nicer(new_key)
+
+
 def hill_climbing(
     initial_key,
     fitness,
@@ -344,7 +365,7 @@ class Affine:
         a = (p1 - p2)(c1 - c2) ^ -1
         b = p1 - a*c1
         """
-        #possible_keys = list()
+        # possible_keys = list()
         for pair in self.modal_pairs:
             try:
                 cipher1 = english_chars.index(pair[0])
@@ -359,7 +380,7 @@ class Affine:
                 continue
             else:
                 yield Affine.Key(a, b)
-                #possible_keys.append(Affine.Key(a, b))
+                # possible_keys.append(Affine.Key(a, b))
         # return possible_keys
 
     @staticmethod
@@ -731,6 +752,7 @@ class MultiSub:
     @staticmethod
     def multi_to_mono(text, size, keep=[]):
         new_text = letters(text, keep=keep)
+        print(new_text)
         split_text = list(
             new_text[i:i + size] for i in range(0, len(new_text), size)
         )
@@ -2001,7 +2023,58 @@ class Challenge2018:
 
 
 if __name__ == "__main__":
-    x = cipher_texts.Challenge2018.encrypted_text_8B
-    w = Viginere(x, key="shadow")
-    print(Challenge2018.solution_8B)
+    xy = cipher_texts.Challenge2018.translated_text_10A
+    yx = MonoSub(
+        xy,
+        key={
+            "a": "I",
+            "b": "E",
+            "c": "R",
+            "d": "P",
+            "e": "F",
+            "f": "B",
+            "g": "L",
+            "h": "V",
+            "i": "N",
+            "j": "J",
+            "k": "G",
+            "l": "T",
+            "m": "D",
+            "n": "C",
+            "o": "Q",
+            "p": "M",
+            "q": "U",
+            "r": "O",
+            "s": "X",
+            "t": "Y",
+            "u": "A",
+            "v": "K",
+            "w": "S",
+            "x": "Z",
+            "y": "H",
+            "z": "W"
+        }
+    )
+    x = cipher_texts.Challenge2018.encrypted_text_10B
+    yzy = Viginere(x).split_text
+    zzz = list(yzy)
+    splits = [
+        """tpdfehdgojtphtmfhhzftwwthjwdqjifhtftfaxquedwptffddhdwhhumdjdfuweofpaomfuwxpfmfhudfahpjmaejufoxeeuouwivaffutaxpuhpufduhhowdjuafhaujiuevhjdubebtpufftupptfpvttfwpffudftftwdwzuufjjzfujufwpepegddnfopynwfnbpfvuppdpldtupffwhfdhjpfdtdwdtfftjjuwtwiuhaqntgmevxtfouthmpdbvahhudffwdvjddddefpjjpfuhdofaffpdfhpqpdnhpwwujjhuujudwjejoffpddhufedbgzbpmtffjwzwuucpotutfmffzfjhffnvbiinuhtufmfufdodpjegqhmedtfaxtwuhfhapnawjvuajfgjddufuxpvwzfaawzumqzmawwfavveqfaufowpujjcfjfjdpqolubuuafhawnjfhawmmiuewfoawbhifjhtdpdqjmiwfunttufxwyflutvnuxwnwpedndffifhefwumdjuwjdfateemdgdtdphmqwanwpcgjmumjdeetqgipphudfpfttfuaujutjdemftheeumjomwjafugpfmuwxhfuuuhfdpgifpgwfjhdtfwauynthejzeujdnuvfacmnfwfogwhzwhduhxuevuduuuebeuduwufeutdfhdpdfwmjftwjjptujehtauvojduoduateqtaxddjfhuwpazehzjvypptcdjeuftttfxdaafwoldxjgzitopapjpfxuzhfdpbjhjofpjffhhfcmozxduuddfdhmtulnbfwvwaaeophcvedogjhuphquwmfdotufjhofmpuhujtpphfxiavdjgnqpjhdfp""",
+    ]
+    keys = [{'d': 'A', 'c': 'B', 'e': 'C', 'o': 'D', 'f': 'E', 'g': 'F', 'i': 'G', 'a': 'H', 'j': 'I', 's': 'J', 'l': 'K', 'm': 'L', 'n': 'M', 'p': 'N', 'w': 'O', 'q': 'P', 'r': 'Q', 't': 'R', 'h': 'S', 'u': 'T', 'v': 'U', 'x': 'V', 'b': 'W', 'y': 'X', 'z': 'Y', 'k': 'Z'}, {'t': 'A', 'y': 'B', 'z': 'C', 'u': 'D', 's': 'E', 'h': 'F', 'a': 'G', 'r': 'H', 'd': 'I', 'o': 'J', 'w': 'K', 'b': 'L', 'c': 'M', 'e': 'N', 'v': 'O', 'f': 'P', 'g': 'Q', 'i': 'R', 'q': 'S', 'j': 'T', 'k': 'U', 'l': 'V', 'x': 'W', 'm': 'X', 'n': 'Y', 'p': 'Z'}, {'w': 'A', 'f': 'B', 'g': 'C', 'b': 'D', 'i': 'E', 'j': 'F', 'k': 'G', 'o': 'H', 'l': 'I', 'm': 'J', 'n': 'K', 'p': 'L', 'q': 'M', 'r': 'N', 'c': 'O', 't': 'P', 'a': 'Q', 'v': 'R', 'd': 'S', 'x': 'T', 'y': 'U', 'z': 'V', 'e': 'W', 's': 'X', 'h': 'Y', 'u': 'Z'}, {'g': 'A', 'l': 'B', 'm': 'C', 'i': 'D', 'n': 'E', 'p': 'F', 'q': 'G', 'f': 'H', 'r': 'I', 't': 'J', 'u': 'K', 'v': 'L', 'x': 'M',
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               'y': 'N', 'j': 'O', 'z': 'P', 's': 'Q', 'h': 'R', 'e': 'S', 'a': 'T', 'd': 'U', 'o': 'V', 'k': 'W', 'w': 'X', 'b': 'Y', 'c': 'Z'}, {'i': 'A', 'm': 'B', 'n': 'C', 'j': 'D', 'p': 'E', 'q': 'F', 'r': 'G', 'g': 'H', 't': 'I', 'u': 'J', 'v': 'K', 'x': 'L', 'y': 'M', 'z': 'N', 'k': 'O', 's': 'P', 'e': 'Q', 'a': 'R', 'f': 'S', 'd': 'T', 'o': 'U', 'w': 'V', 'l': 'W', 'b': 'X', 'c': 'Y', 'h': 'Z'}, {'y': 'A', 'a': 'B', 'd': 'C', 'z': 'D', 'o': 'E', 'w': 'F', 'b': 'G', 'x': 'H', 'c': 'I', 'e': 'J', 'f': 'K', 'g': 'L', 'i': 'M', 'j': 'N', 's': 'O', 'k': 'P', 'l': 'Q', 'm': 'R', 'v': 'S', 'n': 'T', 'p': 'U', 'q': 'V', 'h': 'W', 'r': 'X', 't': 'Y', 'u': 'Z'}, {'c': 'A', 'i': 'B', 'j': 'C', 'e': 'D', 'k': 'E', 'l': 'F', 'm': 'G', 'b': 'H', 'n': 'I', 'o': 'J', 'q': 'K', 'r': 'L', 't': 'M', 'u': 'N', 'f': 'O', 'v': 'P', 'p': 'Q', 'y': 'R', 'w': 'S', 'z': 'T', 's': 'U', 'h': 'V', 'g': 'W', 'a': 'X', 'd': 'Y', 'x': 'Z'}]
+    trans_splits = [
+        MonoSub(
+            split,
+            key=k_ey).encipher()
+        for split, k_ey in itertools.zip_longest(zzz, keys, fillvalue=" ")
+    ]
+    #print(list(keys_nicer(key) for key in keys))
+    # print(trans_splits)
+    result = "".join("".join(stuple) for stuple in zip(*trans_splits))
+    print(match(x, result))
+    #print("\n".join((chunked(result, 7))))
+    # print(result)
+    #keys[1] = key_swap_chars(keys[1], "J", "Q")
+    # print(keys)
     print("--- %s seconds ---" % (time.time() - start_time))
