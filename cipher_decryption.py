@@ -2020,9 +2020,7 @@ class Challenge2018:
         cipher_texts.Challenge2018.encrypted_text_8B,
         key="shadow"
     ).encipher()
-
-
-if __name__ == "__main__":
+    """
     xy = cipher_texts.Challenge2018.translated_text_10A
     yx = MonoSub(
         xy,
@@ -2059,7 +2057,7 @@ if __name__ == "__main__":
     yzy = Viginere(x).split_text
     zzz = list(yzy)
     splits = [
-        """tpdfehdgojtphtmfhhzftwwthjwdqjifhtftfaxquedwptffddhdwhhumdjdfuweofpaomfuwxpfmfhudfahpjmaejufoxeeuouwivaffutaxpuhpufduhhowdjuafhaujiuevhjdubebtpufftupptfpvttfwpffudftftwdwzuufjjzfujufwpepegddnfopynwfnbpfvuppdpldtupffwhfdhjpfdtdwdtfftjjuwtwiuhaqntgmevxtfouthmpdbvahhudffwdvjddddefpjjpfuhdofaffpdfhpqpdnhpwwujjhuujudwjejoffpddhufedbgzbpmtffjwzwuucpotutfmffzfjhffnvbiinuhtufmfufdodpjegqhmedtfaxtwuhfhapnawjvuajfgjddufuxpvwzfaawzumqzmawwfavveqfaufowpujjcfjfjdpqolubuuafhawnjfhawmmiuewfoawbhifjhtdpdqjmiwfunttufxwyflutvnuxwnwpedndffifhefwumdjuwjdfateemdgdtdphmqwanwpcgjmumjdeetqgipphudfpfttfuaujutjdemftheeumjomwjafugpfmuwxhfuuuhfdpgifpgwfjhdtfwauynthejzeujdnuvfacmnfwfogwhzwhduhxuevuduuuebeuduwufeutdfhdpdfwmjftwjjptujehtauvojduoduateqtaxddjfhuwpazehzjvypptcdjeuftttfxdaafwoldxjgzitopapjpfxuzhfdpbjhjofpjffhhfcmozxduuddfdhmtulnbfwvwaaeophcvedogjhuphquwmfdotufjhofmpuhujtpphfxiavdjgnqpjhdfp""",
+        """"""tpdfehdgojtphtmfhhzftwwthjwdqjifhtftfaxquedwptffddhdwhhumdjdfuweofpaomfuwxpfmfhudfahpjmaejufoxeeuouwivaffutaxpuhpufduhhowdjuafhaujiuevhjdubebtpufftupptfpvttfwpffudftftwdwzuufjjzfujufwpepegddnfopynwfnbpfvuppdpldtupffwhfdhjpfdtdwdtfftjjuwtwiuhaqntgmevxtfouthmpdbvahhudffwdvjddddefpjjpfuhdofaffpdfhpqpdnhpwwujjhuujudwjejoffpddhufedbgzbpmtffjwzwuucpotutfmffzfjhffnvbiinuhtufmfufdodpjegqhmedtfaxtwuhfhapnawjvuajfgjddufuxpvwzfaawzumqzmawwfavveqfaufowpujjcfjfjdpqolubuuafhawnjfhawmmiuewfoawbhifjhtdpdqjmiwfunttufxwyflutvnuxwnwpedndffifhefwumdjuwjdfateemdgdtdphmqwanwpcgjmumjdeetqgipphudfpfttfuaujutjdemftheeumjomwjafugpfmuwxhfuuuhfdpgifpgwfjhdtfwauynthejzeujdnuvfacmnfwfogwhzwhduhxuevuduuuebeuduwufeutdfhdpdfwmjftwjjptujehtauvojduoduateqtaxddjfhuwpazehzjvypptcdjeuftttfxdaafwoldxjgzitopapjpfxuzhfdpbjhjofpjffhhfcmozxduuddfdhmtulnbfwvwaaeophcvedogjhuphquwmfdotufjhofmpuhujtpphfxiavdjgnqpjhdfp"""""",
     ]
     keys = [{'d': 'A', 'c': 'B', 'e': 'C', 'o': 'D', 'f': 'E', 'g': 'F', 'i': 'G', 'a': 'H', 'j': 'I', 's': 'J', 'l': 'K', 'm': 'L', 'n': 'M', 'p': 'N', 'w': 'O', 'q': 'P', 'r': 'Q', 't': 'R', 'h': 'S', 'u': 'T', 'v': 'U', 'x': 'V', 'b': 'W', 'y': 'X', 'z': 'Y', 'k': 'Z'}, {'t': 'A', 'y': 'B', 'z': 'C', 'u': 'D', 's': 'E', 'h': 'F', 'a': 'G', 'r': 'H', 'd': 'I', 'o': 'J', 'w': 'K', 'b': 'L', 'c': 'M', 'e': 'N', 'v': 'O', 'f': 'P', 'g': 'Q', 'i': 'R', 'q': 'S', 'j': 'T', 'k': 'U', 'l': 'V', 'x': 'W', 'm': 'X', 'n': 'Y', 'p': 'Z'}, {'w': 'A', 'f': 'B', 'g': 'C', 'b': 'D', 'i': 'E', 'j': 'F', 'k': 'G', 'o': 'H', 'l': 'I', 'm': 'J', 'n': 'K', 'p': 'L', 'q': 'M', 'r': 'N', 'c': 'O', 't': 'P', 'a': 'Q', 'v': 'R', 'd': 'S', 'x': 'T', 'y': 'U', 'z': 'V', 'e': 'W', 's': 'X', 'h': 'Y', 'u': 'Z'}, {'g': 'A', 'l': 'B', 'm': 'C', 'i': 'D', 'n': 'E', 'p': 'F', 'q': 'G', 'f': 'H', 'r': 'I', 't': 'J', 'u': 'K', 'v': 'L', 'x': 'M',
                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                'y': 'N', 'j': 'O', 'z': 'P', 's': 'Q', 'h': 'R', 'e': 'S', 'a': 'T', 'd': 'U', 'o': 'V', 'k': 'W', 'w': 'X', 'b': 'Y', 'c': 'Z'}, {'i': 'A', 'm': 'B', 'n': 'C', 'j': 'D', 'p': 'E', 'q': 'F', 'r': 'G', 'g': 'H', 't': 'I', 'u': 'J', 'v': 'K', 'x': 'L', 'y': 'M', 'z': 'N', 'k': 'O', 's': 'P', 'e': 'Q', 'a': 'R', 'f': 'S', 'd': 'T', 'o': 'U', 'w': 'V', 'l': 'W', 'b': 'X', 'c': 'Y', 'h': 'Z'}, {'y': 'A', 'a': 'B', 'd': 'C', 'z': 'D', 'o': 'E', 'w': 'F', 'b': 'G', 'x': 'H', 'c': 'I', 'e': 'J', 'f': 'K', 'g': 'L', 'i': 'M', 'j': 'N', 's': 'O', 'k': 'P', 'l': 'Q', 'm': 'R', 'v': 'S', 'n': 'T', 'p': 'U', 'q': 'V', 'h': 'W', 'r': 'X', 't': 'Y', 'u': 'Z'}, {'c': 'A', 'i': 'B', 'j': 'C', 'e': 'D', 'k': 'E', 'l': 'F', 'm': 'G', 'b': 'H', 'n': 'I', 'o': 'J', 'q': 'K', 'r': 'L', 't': 'M', 'u': 'N', 'f': 'O', 'v': 'P', 'p': 'Q', 'y': 'R', 'w': 'S', 'z': 'T', 's': 'U', 'h': 'V', 'g': 'W', 'a': 'X', 'd': 'Y', 'x': 'Z'}]
@@ -2077,4 +2075,9 @@ if __name__ == "__main__":
     # print(result)
     #keys[1] = key_swap_chars(keys[1], "J", "Q")
     # print(keys)
+    """
+
+
+if __name__ == "__main__":
+
     print("--- %s seconds ---" % (time.time() - start_time))
