@@ -2084,6 +2084,12 @@ class Challenge2019:
     solution_0B = Caesar(
         cipher_texts.Challenge2019.encrypted_text_0B, shift=21
     ).encipher()
+    solution_1A = Caesar(
+        cipher_texts.Challenge2019.encrypted_text_1A, shift=10
+    ).encipher()
+    solution_1B = Caesar(
+        cipher_texts.Challenge2019.encrypted_text_1B, shift=13
+    ).encipher()
     solution_2A = Affine(
         cipher_texts.Challenge2019.encrypted_text_2A, switch=(19, 15)
     ).encipher()
@@ -2093,5 +2099,4 @@ class Challenge2019:
 
 
 if __name__ == "__main__":
-    x = cipher_texts.Challenge2019.encrypted_text_2B
     print("--- %s seconds ---" % (time.time() - start_time))
