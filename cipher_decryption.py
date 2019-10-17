@@ -353,7 +353,7 @@ class Affine:
                 self.text
             )[0:Affine.MAX_SEARCH]
         )
-        return itertools.combinations(freq_chars, 2)
+        return itertools.permutations(freq_chars, 2)
 
     @property
     def prob_keys(self) -> list:
@@ -365,7 +365,6 @@ class Affine:
         a = (p1 - p2)(c1 - c2) ^ -1
         b = p1 - a*c1
         """
-        # possible_keys = list()
         for pair in self.modal_pairs:
             try:
                 cipher1 = english_chars.index(pair[0])
@@ -2085,10 +2084,14 @@ class Challenge2019:
     solution_0B = Caesar(
         cipher_texts.Challenge2019.encrypted_text_0B, shift=21
     ).encipher()
+    solution_2A = Affine(
+        cipher_texts.Challenge2019.encrypted_text_2A, switch=(19, 15)
+    ).encipher()
+    solution_2B = Affine(
+        cipher_texts.Challenge2019.encrypted_text_2B, switch=(9, 14)
+    ).encipher()
 
 
 if __name__ == "__main__":
-    x = cipher_texts.Challenge2019.encrypted_text_0B
-    y = Caesar(x)
-    print(Challenge2019.solution_0B)
+    x = cipher_texts.Challenge2019.encrypted_text_2B
     print("--- %s seconds ---" % (time.time() - start_time))
