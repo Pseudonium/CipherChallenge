@@ -610,19 +610,23 @@ class MonoSub:
     CharSwap = collections.namedtuple('CharSwap', ['char', 'swap_char'])
     MAX_SEARCH = 1000
 
-    def __init__(self, text: str, key=None, keyword=False):
+    def __init__(self, text: str, key=None, keyword=False, alternative=False):
         self.text = text
         self.key = key
         self.auto = not bool(key)
+        self.alternative = alternative
         if keyword:
-            self.key = self.keyword_to_key(key)
+            self.key = self.keyword_to_key(key, self.alternative)
 
     @staticmethod
-    def keyword_to_key(key: str) -> dict:
+    def keyword_to_key(key: str, alt: bool) -> dict:
         """Converts a keyword into a substituiton dict."""
         new_key = "".join(
             collections.OrderedDict.fromkeys(letters(key).lower()))
-        start = max(english_chars.index(char) for char in new_key)
+        if alt:
+            start = english_chars.index(new_key[-1])
+        else:
+            start = max(english_chars.index(char) for char in new_key)
         characters = english_chars[start:] + english_chars[:start]
         for char in characters:
             if char not in new_key:
@@ -2096,7 +2100,16 @@ class Challenge2019:
     solution_2B = Affine(
         cipher_texts.Challenge2019.encrypted_text_2B, switch=(9, 14)
     ).encipher()
+    solution_3A = MonoSub(
+        cipher_texts.Challenge2019.encrypted_text_3A,
+        key="saturnv", keyword=True
+    ).encipher()
 
 
 if __name__ == "__main__":
+    x = cipher_texts.Challenge2019.encrypted_text_3B
+    y = MonoSub(x, key="vostok", keyword=True, alternative=True)
+    keyb = {'k': 'e', 'd': 't', 'v': 'a', 'y': 'o', 'x': 'n', 'b': 'r', 'p': 'i', 'c': 's', 'n': 'h', 'u': 'l', 'm': 'g', 's': 'c',
+            'e': 'u', 't': 'd', 'z': 'p', 'w': 'm', 'g': 'w', 'i': 'y', 'l': 'f', 'o': 'b', 'f': 'v', 'r': 'k', 'h': 'x', 'a': 'j', 'j': 'q', 'q': 'z'}
+    print(y.encipher())
     print("--- %s seconds ---" % (time.time() - start_time))
