@@ -443,6 +443,7 @@ class Viginere:
                 codex(split) for split in split_text
             ) / len(split_text)
             if average_codex > ENGLISH_LOWER_CODEX:
+                #print("Found one!")
                 return possible_length
         else:
             return 1
@@ -686,6 +687,7 @@ class MonoSub:
             key[char] if char in key
             else char for char in self.text.lower()
         )
+        # return TextKey(enciphered, key)
         if give_key:
             return TextKey(match(self.text, enciphered), key)
         else:
@@ -1058,16 +1060,19 @@ class ScyColTrans:
         if self.auto_scy and self.auto_col:
             possible_texts = list()
             for pos_scy_key in range(2, ScyColTrans.MAX_SEARCH):
-                pos_text = Scytale(self.text, key=pos_scy_key).encipher()
-                best_from_key = ColTrans(pos_text).encipher(give_key=True)
-                possible_texts.append(
-                    ScyColTrans.TextScyColFit(
-                        text=best_from_key.text,
-                        scytale=pos_scy_key,
-                        columnar=best_from_key.key,
-                        fitness=english_quadgram_fitness(best_from_key.text)
+                for pos_len in range(2, ScyColTrans.MAX_SEARCH):
+                    pos_text = Scytale(self.text, key=pos_scy_key).encipher()
+                    best_from_key = ColTrans(
+                        pos_text, guessed_length=pos_len
+                    ).encipher(give_key=True)
+                    possible_texts.append(
+                        ScyColTrans.TextScyColFit(
+                            text=best_from_key.text,
+                            scytale=pos_scy_key,
+                            columnar=best_from_key.key,
+                            fitness=english_quadgram_fitness(best_from_key.text)
+                        )
                     )
-                )
             best = sorted(
                 possible_texts,
                 key=lambda elem: elem.fitness,
@@ -2070,13 +2075,13 @@ class Challenge2018:
             key=k_ey).encipher()
         for split, k_ey in itertools.zip_longest(zzz, keys, fillvalue=" ")
     ]
-    #print(list(keys_nicer(key) for key in keys))
+    # print(list(keys_nicer(key) for key in keys))
     # print(trans_splits)
     result = "".join("".join(stuple) for stuple in zip(*trans_splits))
     print(match(x, result))
-    #print("\n".join((chunked(result, 7))))
+    # print("\n".join((chunked(result, 7))))
     # print(result)
-    #keys[1] = key_swap_chars(keys[1], "J", "Q")
+    # keys[1] = key_swap_chars(keys[1], "J", "Q")
     # print(keys)
     """
 
@@ -2104,12 +2109,21 @@ class Challenge2019:
         cipher_texts.Challenge2019.encrypted_text_3A,
         key="saturnv", keyword=True
     ).encipher()
+    solution_3B = MonoSub(
+        cipher_texts.Challenge2019.encrypted_text_3B,
+        key="vostok", keyword=True, alternative=True
+    ).encipher()
+    solution_4A = MonoSub(
+        cipher_texts.Challenge2019.encrypted_text_4A,
+        key="lunar", keyword=True, alternative=True
+    ).encipher()
 
 
 if __name__ == "__main__":
-    x = cipher_texts.Challenge2019.encrypted_text_3B
-    y = MonoSub(x, key="vostok", keyword=True, alternative=True)
-    keyb = {'k': 'e', 'd': 't', 'v': 'a', 'y': 'o', 'x': 'n', 'b': 'r', 'p': 'i', 'c': 's', 'n': 'h', 'u': 'l', 'm': 'g', 's': 'c',
-            'e': 'u', 't': 'd', 'z': 'p', 'w': 'm', 'g': 'w', 'i': 'y', 'l': 'f', 'o': 'b', 'f': 'v', 'r': 'k', 'h': 'x', 'a': 'j', 'j': 'q', 'q': 'z'}
-    print(y.encipher())
+    x = cipher_texts.Challenge2019.encrypted_text_7B
+    y = Scytale(x, key=47, auto=False).encipher()
+    zw = Viginere(y)
+    # print(y.encipher(give_key=True))
+    z = """.NFKGNH PYFUVR NI EYKBTH NSVHHNZ NTJ ANTJ TCVFSVFVC HUTJ PI JV ENJAUT PVM NTJ JONJFNTCUG NTJ RRB EVNF ANTJ JVTJ NHK KBP RU JVTJ NZ BJ HZNNH .NSVHHNZ HUTJ BJ PNX NTJ AU FNTCUG ENEANZZBGNF PZ SAUYVNGABG PI NFNT NAB JHNSSKH BJ ENUFJ NLVT U JKI ,PYNFKGNH ZNJHPH V AB NNFSV BJ MBT NFKH JBA ?JCPFGAN NYIKBE EYKBTH NM NIPVZ .HFNTCUG TJUM NKAUJABG BJ NLVT YYUM NM BH ,ZVNJ HUTJ FBR CK NAB JNH J’ANLVT NM JKI ,XBBI NEBG V BJ SAUTGJUMH EANZZBGNF EYKBM U PYYVKHK .CBFEHNLVN BJ PFJ YYUM EAV HKBUFKG SAUJJNS JFVJH YYUM JHBC NTJ ZBFR JHUYVAFKBW NTJ JVTJ NZKHHV BHYV H’JNY .ENJCNGFNJAU JNS YYUM HNSVHHNZ FKB XHUF YVNF V HU NFNTJ HJGNCHKH JFVZH RB HENFEAKT EAV HABUJVSUJHNLAU SAUBSAB BMJ TJUM JKI NFKGNH PJJNFC NFV HYNAAVTG FKB .ENANJTSUJ NI BJ ENNA PYYVNF HABUJVGUAKZZBG"""
+    print(zw.encipher(give_key=True))
     print("--- %s seconds ---" % (time.time() - start_time))
