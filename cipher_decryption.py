@@ -225,7 +225,7 @@ KeyFit = collections.namedtuple(
 def auto_freq_analyser(text: str, keep: list=[]) -> list:
     """Analyse the frequency of characters in a text."""
     local_alphabet_freq = collections.defaultdict(int)
-    text = letters(text, keep=keep).lower()
+    #text = letters(text, keep=keep).lower()
     for character in text:
         local_alphabet_freq[character] += 1
     freq_table = (
@@ -424,7 +424,7 @@ class Affine:
 class Viginere:
 
     ChiShift = collections.namedtuple("ChiShift", ['chi', 'shift'])
-    MAX_SEARCH = 20
+    MAX_SEARCH = 100
 
     def __init__(self, text: str, key: str=""):
         self.text = text
@@ -713,8 +713,8 @@ class DuoSub:
             if bigram not in substitutions:
                 substitutions[bigram] = english_chars[eng_index]
                 eng_index += 1
-            if eng_index == 24:
-                break
+            # if eng_index == 24:
+                # break
         return "".join(substitutions[bigram] for bigram in split_text)
 
     @staticmethod
@@ -2120,10 +2120,7 @@ class Challenge2019:
 
 
 if __name__ == "__main__":
-    x = cipher_texts.Challenge2019.encrypted_text_7B
-    y = Scytale(x, key=47, auto=False).encipher()
-    zw = Viginere(y)
-    # print(y.encipher(give_key=True))
-    z = """.NFKGNH PYFUVR NI EYKBTH NSVHHNZ NTJ ANTJ TCVFSVFVC HUTJ PI JV ENJAUT PVM NTJ JONJFNTCUG NTJ RRB EVNF ANTJ JVTJ NHK KBP RU JVTJ NZ BJ HZNNH .NSVHHNZ HUTJ BJ PNX NTJ AU FNTCUG ENEANZZBGNF PZ SAUYVNGABG PI NFNT NAB JHNSSKH BJ ENUFJ NLVT U JKI ,PYNFKGNH ZNJHPH V AB NNFSV BJ MBT NFKH JBA ?JCPFGAN NYIKBE EYKBTH NM NIPVZ .HFNTCUG TJUM NKAUJABG BJ NLVT YYUM NM BH ,ZVNJ HUTJ FBR CK NAB JNH J’ANLVT NM JKI ,XBBI NEBG V BJ SAUTGJUMH EANZZBGNF EYKBM U PYYVKHK .CBFEHNLVN BJ PFJ YYUM EAV HKBUFKG SAUJJNS JFVJH YYUM JHBC NTJ ZBFR JHUYVAFKBW NTJ JVTJ NZKHHV BHYV H’JNY .ENJCNGFNJAU JNS YYUM HNSVHHNZ FKB XHUF YVNF V HU NFNTJ HJGNCHKH JFVZH RB HENFEAKT EAV HABUJVSUJHNLAU SAUBSAB BMJ TJUM JKI NFKGNH PJJNFC NFV HYNAAVTG FKB .ENANJTSUJ NI BJ ENNA PYYVNF HABUJVGUAKZZBG"""
-    print(zw.encipher(give_key=True))
+    x = cipher_texts.Challenge2019.encrypted_text_8A
+    y = Viginere(x)
+    print(y.encipher(give_key=True))
     print("--- %s seconds ---" % (time.time() - start_time))
