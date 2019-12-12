@@ -2120,7 +2120,24 @@ class Challenge2019:
 
 
 if __name__ == "__main__":
-    x = cipher_texts.Challenge2019.encrypted_text_8A
-    y = Viginere(x)
-    print(y.encipher(give_key=True))
+    x = cipher_texts.Challenge2019.encrypted_text_9B
+    y = letters(x, keep=list(str(num) for num in range(3)))
+    w = list(chunked(y, 7))
+    z = auto_freq_analyser(w)
+    alphabet_without = list(english_1gram_expected_dict.keys())[:25]
+    # print(alphabet_without)
+    alphabet_product = list(itertools.permutations(alphabet_without, 2))
+    # print(alphabet_product)
+    # print(len(alphabet_product))
+    modified_product = ["".join(item) for item in alphabet_product]
+    # print(modified_product)
+    substitutions_dict = {character.character: english for character,
+                          english in zip(z, modified_product)}
+    # print(substitutions_dict)
+    new_text = ""
+    for item in w:
+        new_text += substitutions_dict[item]
+    xy = cipher_texts.Challenge2019.translated_text_9B
+    z1 = Scytale(xy, )
+
     print("--- %s seconds ---" % (time.time() - start_time))
