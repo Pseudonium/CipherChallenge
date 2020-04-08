@@ -225,7 +225,7 @@ KeyFit = collections.namedtuple(
 def auto_freq_analyser(text: str, keep: list=[]) -> list:
     """Analyse the frequency of characters in a text."""
     local_alphabet_freq = collections.defaultdict(int)
-    #text = letters(text, keep=keep).lower()
+    # text = letters(text, keep=keep).lower()
     for character in text:
         local_alphabet_freq[character] += 1
     freq_table = (
@@ -259,7 +259,7 @@ def english_1gram_chi(text: str) -> float:
 
 def codex(text: str) -> float:
     """Return the index of coincidence of a text."""
-    text = letters(text).lower()
+    # text = letters(text).lower()
     length = len(text)
     return sum(
         count * (count - 1)
@@ -376,6 +376,7 @@ class Affine:
                     mod=ENGLISH_LANG_LEN) % ENGLISH_LANG_LEN
                 b = (plain1 - a*cipher1) % ENGLISH_LANG_LEN
             except ValueError:
+                print("FAILED")
                 continue
             else:
                 yield Affine.Key(a, b)
@@ -443,7 +444,7 @@ class Viginere:
                 codex(split) for split in split_text
             ) / len(split_text)
             if average_codex > ENGLISH_LOWER_CODEX:
-                #print("Found one!")
+                # print("Found one!")
                 return possible_length
         else:
             return 1
@@ -766,8 +767,11 @@ class MultiSub:
         eng_index = 0
         for ngram in split_text:
             if ngram not in substitutions:
-                substitutions[ngram] = english_chars[eng_index]
-                eng_index += 1
+                if eng_index == 26:
+                    substitutions[ngram] = " "
+                else:
+                    substitutions[ngram] = english_chars[eng_index]
+                    eng_index += 1
         return "".join(substitutions[ngram] for ngram in split_text)
 
     def encipher(self):
@@ -1387,11 +1391,11 @@ class Playfair:
             initial_key="".join(random.sample(Playfair.ALPHABET_NO_J, k=25)),
             fitness=self.text_fitness,
             new_key=Playfair.gen_new_key,
-            initial_temp=30,
+            initial_temp=80,
             count=20000,
             max_length=10000,
             stale=10000,
-            stale_fitness=-7600
+            stale_fitness=-34000
         )
 
     def encipher(self, key: str="", give_key=False, pretty=False):
@@ -2120,24 +2124,7 @@ class Challenge2019:
 
 
 if __name__ == "__main__":
-    x = cipher_texts.Challenge2019.encrypted_text_9B
-    y = letters(x, keep=list(str(num) for num in range(3)))
-    w = list(chunked(y, 7))
-    z = auto_freq_analyser(w)
-    alphabet_without = list(english_1gram_expected_dict.keys())[:25]
-    # print(alphabet_without)
-    alphabet_product = list(itertools.permutations(alphabet_without, 2))
-    # print(alphabet_product)
-    # print(len(alphabet_product))
-    modified_product = ["".join(item) for item in alphabet_product]
-    # print(modified_product)
-    substitutions_dict = {character.character: english for character,
-                          english in zip(z, modified_product)}
-    # print(substitutions_dict)
-    new_text = ""
-    for item in w:
-        new_text += substitutions_dict[item]
-    xy = cipher_texts.Challenge2019.translated_text_9B
-    z1 = Scytale(xy, )
-
+    x = cipher_texts.ChallengeCorona.encrypted_text_1B.lower()
+    y = MonoSub(letters(x))
+    print(y.encipher())
     print("--- %s seconds ---" % (time.time() - start_time))
