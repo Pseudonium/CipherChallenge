@@ -2124,9 +2124,9 @@ class Challenge2019:
 
 
 if __name__ == "__main__":
-    x = cipher_texts.ChallengeCorona.encrypted_text_6B
-    y = letters(x).lower()
-    y2 = Scytale(y, key=5).encipher()
-    z = ColTrans(y2, guessed_length=5)
-    print(z.encipher(give_key=True))
+    x = cipher_texts.ChallengeCorona.encrypted_text_7B
+    y = Caesar(letters(x).lower(), shift=16, forced=True)
+    z = y.encipher()
+    w = ColTrans(z, guessed_length=7)
+    print(w.encipher(give_key=True))
     print("--- %s seconds ---" % (time.time() - start_time))
